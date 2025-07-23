@@ -39,9 +39,9 @@ jobs:
 
     - name: Analisis en R 
       run:
-
+      
     - name: Publicar artefactos
-        uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v3
         with:
           name: metagenomics-results
           path: output/
