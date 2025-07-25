@@ -16,9 +16,9 @@ This repository contains the automatized pipeline used in the article [...] for 
 [Taxonomic assignment](#taxonomic-assignment)
 
 [Rstudio](#rstudio)
-  [Exploring Taxonomy](#exploring-taxonomy)
-  [Diveristy](#diversity)
-  [Taxonomic Analysis](#taxonomic-analysis)
+  - [Exploring Taxonomy](#exploring-taxonomy)
+  - [Diveristy](#diversity)
+  - [Taxonomic Analysis](#taxonomic-analysis)
 
 ---
 
