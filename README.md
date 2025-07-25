@@ -22,6 +22,17 @@ Rstudio
 
 
 
+
+
+
+
+
+
+
+
+## Conda and the environment
+
+
   # Análisis Metagenómico
 
 Este repositorio contiene un pipeline automatizado para realizar análisis metagenómicos con GitHub Actions.
