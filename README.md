@@ -60,12 +60,6 @@ Kraken2 y Krona nos ayudan a identificar organismos presentes...
 
 Los resultados finales se pueden descargar desde la pestaña Actions > Artifacts.
 
-# Prueba
-
-- [Uno](#uno)
-- [Dos](#dos)
-
-## Uno
 
 Hola mundo.
 
