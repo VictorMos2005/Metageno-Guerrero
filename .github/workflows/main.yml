@@ -13,35 +13,44 @@ jobs:
     image: continuumio/miniconda3
 
   steps:
-    - name: Checkout repo
+    - name: Checkout repo #Funcion encargada de copiar el repositorio obteniendo así acceso a archivos, scripts, carpetas de datos, etc. Esto permite agilizar los distintos procesos de este pipeline.
+    # This function copies the repository allowing github to access archives, scripts, folders, etc. This helps expedite the various processes on this pipeline
       uses: actions/checkout@v3
 
-    - name: Instalar Conda y el environment 
+    - name: Instalar Conda  # Conda es un programa abierto cuya funcion es la de gestionar ambientes, paquetes y entornos. Los entornos son parte fundamental de la bioinformatica y nos permiten realizar investigación reproducible
+    # Conda is a open-source program that provides package, dependency, and environment management. Environments are a fundamental part of bioinformatics and allow us to make reproducible research
       run:
 
-    - name: Comprobar calidad de lecturas
+    - name: Comprobar calidad de lecturas # Para comprobar la calidad de la lectura se utiliza la herramienta FASTQC, esta nos ayuda a detectar cualquier problema de calidad que nuestra data puede tener, esto lo hace para todas las muestras al mismo tiempo, en lugar de una por una, dandonos como resutado final una gráfica donde se puede ver la calidad de cada muestra y comparar unas con las otras
+    # To check on the quality of the sample we use the tool FASTQC, this program helps us detect any quality issue our data might have, this process is done across all selected samples at the same time, rather than one by one, giving us as an end result a graphic chart where we are able to see the quality of each run and we can compare it with each other
       run:
 
-    - name: Recorte y filtrado
+    - name: Recorte y filtrado # En este paso se recorta y filtra información de baja calidad de muestras las cuales no pasaron el control de calidad de FASTQC, una forma de verlo es como que se estan limpiando las impurezas de esas muestras. Para hacer este proceso se utiliza la herramienta de Trimmomatic. Durante este proceso se eliminarán bases si su puntuación Phred es inferior a 20, al igual que, se eliminaran muestras que tengan menos de 25 bp posterior a este proceso. Cabe mencionar que tambien se eliminaran los adaptadores de las lecturas.
+    # In this step we will cut and filter low quality information of our samples that didn´t pass the quality check of FASTQC, in a way we can see it as removing the imperfections of our samples. For this whole process we are using a tool named Trimmomatic. During this process bases will be removed if their Phred score is below 20, as well as, those reads that end with less than 25 paired bases after the cleaning is done. Is worth mentioning that the adapters of the lectures will be emilinated as well.
       run:
 
-    - name: Ensamblaje del metagenoma 
+    - name: Binning del metagenoma # En el binning del metagenoma se separan los genomas originales de las muestras. Esta separación permite el análisis individual de cuyas especies cuentan con suficiente información para reconstruir su genoma, los genomas reconstruidos se les conoce como MAGS. Para revisar la calidad de los MAGS se utiliza el programa CheckM, el cual revisa que contenga la información completa del genoma y que esta misma no se encuentre contaminada con información de otros genomas.
+    # In the binning of the metagenome, the original genomes of the samples are separated. This allows the individual analisis of the species that have enough reads to recosntruct their genome, this reconstructions are known as MAGS. To check MAGS qualities the prorgram CheckM is used, this program checks that the genome has the complete information and that it is not cross-contaminated with info of other genomes.
       run:
 
-    - name: Binning 
+    - name: Asignacion taxonomica (Kraken) y visualización (Krona) # Para poder hacer la asignación taxonómica se comparan los genomas de la muestra con bases de datos de genomas de distintas especies. La base de datos que se utiliza en este caso es Kraken2. Este es un programa de clasifiación taxonomica, el cual nos brinda clasificaciones de alta calidad y con rapidez. Posteriormente los resultados de Kraken se pasan a una gráfica del programa Krona, el cual nos permite explorar las abundancias de los distintos microorganismos de la muestra.
+    # For the taxonomical assignation, the genomes of the samples are compared with data bases that contain complete genomes of different species. The data base used in this case is Kraken2. This taxonomical classification program delivers high quality and high speed clasificactions. Afterwards, the results of Kraken are put together in a graphic of the Krona program, whic allows us to explore the different abundances of the many microorganisms of the sample being analyzed.
       run:
 
-    - name: Asignacion taxonomica (Kraken) 
+    - name: Taxonomia en R # En este paso se va a utilizar el programa de Rstudio para poder crear tablas de donde se visualizan los resultados de las cada lectura individualemnete, al igual que tablas de abundancia 
+    # In this step we are going to use the Rstudio program to create tables where we are able to visualize the results of each read, as well as abundancy tables
+      run:
+      
+    - name: Abunancia en R #  En Rstudio, se puede determinar los niveles de diversidad taxonomica del metagenoma, en este caso, se utilizaran dos medidas distintas, estas siendo la alfa y beta diversidad. La alfa diversidad determina la abunancia de diferentes especies en un entorno. La beta diversidad es la diferencia entre dos o más entornos. Posteriormente se representaran ambos resultados de forma gráfica
+    # In Rstudio, we can determine the levels of taxonimic diversity of the metagenome, in this case, we are going to use two different meassures, these being alfa and beta diveristies. Alfa diversity determines the diferent species in an environment. Beta diviersity is the difference among two or more environments. Afterwards both results are going to be represented in a graphic
       run:
 
-    - name: Visualización taxonomica 
-      run:
-
-    - name: Analisis en R 
+    - name: Analisis en R # Finalmente se crean gráficas utilizando Rstudio para poder visualizar la diverisdad taxonomica de la abundancia absoluta y relativa, esto se puede utilizar tambien para explorar diversidades y abunancias de distintas familias en particular.
+    # Finally we are going to create graphics using Rstudio to be able to visualize the taxonomic diversity of the relative and absolute abundance. This can also be used to explore diversities and abunances of especific families
       run:
       
     - name: Publicar artefactos
       uses: actions/upload-artifact@v3
-        with:
+       with:
           name: metagenomics-results
           path: output/
