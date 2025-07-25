@@ -1,7 +1,8 @@
 # Metageno-Guerrero
 
+This repository contains the automatized pipeline used in the article [...] for the metagenomic analysis of the 208 samples collected from Guerrero, Mexico
 
-Conda and the environment
+[Conda and the environment](#conda-and-the-environment)
 
 Read quality
 
