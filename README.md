@@ -23,7 +23,7 @@ This repository contains the automatized pipeline used in the article [...] for 
 ---
 
 ## Conda and the environment
-
+Conda is an open-source program that provides package, dependency, and environment management. Environments are a fundamental part of bioinformatics and allow us to make reproducible research
 
 ## Read Quality
 
