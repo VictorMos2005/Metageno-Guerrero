@@ -33,7 +33,7 @@ In this step we will cut and filter low quality information of our samples that 
 
 ## Metagenome Assembly
 
-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+During the assembly of the metagenome the final objective is to ideally obtain the whole sequence of a chromosome. There are several methods and programs in which this can be done, for example the greedy extension, overlap layout consensus, De Bruijns graphs, etc.  
 
 ## Metagenome Binning
 In the binning of the metagenome, the original genomes of the samples are separated. This allows the individual analysis of the species that have enough reads to reconstruct their genome, these reconstructions are known as MAGS. To check MAGS qualities the program CheckM is used, this program checks that the genome has the complete information and that it is not cross-contaminated with info of other genomes.
