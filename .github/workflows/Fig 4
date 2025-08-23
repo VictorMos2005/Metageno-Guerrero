@@ -26,7 +26,7 @@ jobs:
 
       - - name: Ejecutar script de R
   run: |
-    Rscript "redss prueba.R"
+    Rscript "Fig_4.R"
 
 
       - name: Subir resultados de R
