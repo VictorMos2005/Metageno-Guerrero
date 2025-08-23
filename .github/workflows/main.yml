@@ -2,36 +2,28 @@ name: Run R Script
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
   pull_request:
-    branches: [ "main" ]
+    branches:
+      - main
 
 jobs:
-  run-r-script:
+  run-r:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: Instalar R
+      - name: Setup R
         uses: r-lib/actions/setup-r@v2
-        with:
-          r-version: '4.3.1'
 
-      - name: Instalar paquetes necesarios
-        run: |
-          Rscript -e 'install.packages(c("tidyverse"))'
-         
-
-      - - name: Ejecutar script de R
-  run: |
-    Rscript "redss prueba.R"
-
+      - name: Run R script
+        run: Rscript "redss prueba.R"
 
       - name: Subir resultados de R
         uses: actions/upload-artifact@v3
         with:
           name: r-results
           path: results/
-         
