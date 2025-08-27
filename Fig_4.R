@@ -780,7 +780,7 @@ kraken2_aligned$percent <- as.numeric(kraken2_aligned$percent)
 kraken2_filtered <- kraken2_aligned[!(kraken2_keys %in% kaiju_keys), ]
 
 # --- Unir ---
-kaiju_merged <- bind_rows(kaiju_data, kraken2_filtered)
+kaiju_merged.gz <- bind_rows(kaiju_data, kraken2_filtered)
 
 # --- Asignar file_base y Group al objeto fusionado ---
 kaiju_merged <- kaiju_merged %>%
