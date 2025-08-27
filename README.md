@@ -55,6 +55,25 @@ Finally we are going to create graphics using Rstudio to be able to visualize th
 
 
 
+### Fig4
+
+´´´ r
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+´´´
+
+#### --- 1. Leer archivo Kraken2 ---
+´´´ r
+input_path <- "/home/alumno21/axel/files/kraken207tags.txt"  # Modifica si cambia
+kraken2_data <- read.delim(input_path, header = FALSE, stringsAsFactors = FALSE)
+colnames(kraken2_data) <- c("percent", "reads_clade", "reads_direct", "rank", "taxid", "name", "file")
+kraken2_data$name <- trimws(kraken2_data$name)
+kraken2_data$file_base <- basename(kraken2_data$file)
+´´´´
+
+
+
 
 
  
