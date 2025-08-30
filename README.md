@@ -55,13 +55,8 @@ Finally we are going to create graphics using Rstudio to be able to visualize th
 
 # Figures
 
-## Fig. 1
+## FIGURE 1. PCoA in the anthropometric–demographic space and its association with BMI percentile, age group, and lifestyle
 
-### FIGURE 1. PCoA in the anthropometric–demographic space and its association with BMI percentile, age group, and lifestyle
-```{r}
-
-
-```
 
 ### --- REQUIRED LIBRARIES ---
 ```{r}
@@ -72,7 +67,7 @@ library(ggcorrplot)
 library(patchwork)
 
 ```
-```
+``` {r}
 ### --- 1. 1. DATA LOADING AND CLEANING ---
 ```{r}
 data <- read.csv(
@@ -85,7 +80,7 @@ data <- read.csv(
 )
 
 ```
-```
+``` {r}
 ### Remove empty columns and rows (only those completely empty)
 ```{r}
 data <- data[, colSums(!is.na(data)) > 0]
