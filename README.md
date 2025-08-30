@@ -59,7 +59,7 @@ Finally we are going to create graphics using Rstudio to be able to visualize th
 
 
 ### --- REQUIRED LIBRARIES ---
-
+```{r}
 library(ggplot2)
 library(vegan)
 library(dplyr)
@@ -89,14 +89,14 @@ data <- data[rowSums(is.na(data)) < ncol(data), ]
 ```
 ```
 ### Numeric variables
-```{r}
+
 data$BMI <- as.numeric(data$BMI)
 data$Age <- as.numeric(data$Age)
 
 ```
 ```
 ### --- 2. 2. DERIVED VARIABLES ---
-```{r}
+
 data <- data %>%
   mutate(
     Percentil_group = case_when(
@@ -111,14 +111,14 @@ data <- data %>%
 ```
 ```
 ### --- 3. 3. FILTERING for analysis ---
-```{r}
+
 data_complete <- data %>%
   filter(!is.na(BMI), !is.na(Age), !is.na(Percentil_group), !is.na(Age_group), !is.na(Lifestyle))
 
 ```
 ```
 ### --- 4. 4. DISTANCE MATRIX AND PCoA ---
-```{r}
+
 dist_matrix <- vegdist(data_complete[, c("BMI", "Age")], method = "bray")
 pcoa <- cmdscale(dist_matrix, k = 2, eig = TRUE)
 scores_pcoa <- as.data.frame(pcoa$points)
