@@ -59,7 +59,7 @@ Finally we are going to create graphics using Rstudio to be able to visualize th
 
 
 ### --- REQUIRED LIBRARIES ---
-```{r}
+
 library(ggplot2)
 library(vegan)
 library(dplyr)
