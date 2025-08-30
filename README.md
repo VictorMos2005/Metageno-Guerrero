@@ -69,7 +69,7 @@ library(patchwork)
 ```
 ``` {r}
 ### --- 1. 1. DATA LOADING AND CLEANING ---
-```{r}
+
 data <- read.csv(
   file = "/home/alumno21/axel/files/data_207_3.csv",
   header = TRUE,
@@ -82,7 +82,7 @@ data <- read.csv(
 ```
 ``` {r}
 ### Remove empty columns and rows (only those completely empty)
-```{r}
+
 data <- data[, colSums(!is.na(data)) > 0]
 data <- data[rowSums(is.na(data)) < ncol(data), ]
 
@@ -127,7 +127,7 @@ colnames(scores_pcoa) <- c("Dim1", "Dim2")
 ```
 ```
 ### Add categorical variables to color points
-```{r}
+
 scores_pcoa$Percentil_group <- data_complete$Percentil_group
 scores_pcoa$Age_group <- data_complete$Age_group
 scores_pcoa$Lifestyle <- data_complete$Lifestyle
@@ -135,7 +135,7 @@ scores_pcoa$Lifestyle <- data_complete$Lifestyle
 ```
 ```
 ### Labels with counts for Percentil_group
-```{r}
+
 percentil_counts <- data_complete %>%
   count(Percentil_group)
 percentil_labels <- setNames(paste0(percentil_counts$Percentil_group, " (", percentil_counts$n, ")"), percentil_counts$Percentil_group)
