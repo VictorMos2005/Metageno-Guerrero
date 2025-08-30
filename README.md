@@ -65,11 +65,9 @@ library(vegan)
 library(dplyr)
 library(ggcorrplot)
 library(patchwork)
-
 ```
 ### --- 1. 1. DATA LOADING AND CLEANING ---
 ``` {r}
-
 data <- read.csv(
   file = "/home/alumno21/axel/files/data_207_3.csv",
   header = TRUE,
@@ -78,21 +76,17 @@ data <- read.csv(
   stringsAsFactors = FALSE,
   na.strings = c("", "NA")
 )
-
 ```
 ### Remove empty columns and rows (only those completely empty)
 
 ``` {r}
-
 data <- data[, colSums(!is.na(data)) > 0]
 data <- data[rowSums(is.na(data)) < ncol(data), ]
-
 ```
 ### Numeric variables
 ```
 data$BMI <- as.numeric(data$BMI)
 data$Age <- as.numeric(data$Age)
-
 ```
 ### --- 2. 2. DERIVED VARIABLES ---
 ```
@@ -108,41 +102,35 @@ data <- data %>%
   )
 
 ```
-```
 ### --- 3. 3. FILTERING for analysis ---
 
+```
 data_complete <- data %>%
   filter(!is.na(BMI), !is.na(Age), !is.na(Percentil_group), !is.na(Age_group), !is.na(Lifestyle))
-
-```
 ```
 ### --- 4. 4. DISTANCE MATRIX AND PCoA ---
-
+```
 dist_matrix <- vegdist(data_complete[, c("BMI", "Age")], method = "bray")
 pcoa <- cmdscale(dist_matrix, k = 2, eig = TRUE)
 scores_pcoa <- as.data.frame(pcoa$points)
 colnames(scores_pcoa) <- c("Dim1", "Dim2")
-
-```
 ```
 ### Add categorical variables to color points
 
+```
 scores_pcoa$Percentil_group <- data_complete$Percentil_group
 scores_pcoa$Age_group <- data_complete$Age_group
 scores_pcoa$Lifestyle <- data_complete$Lifestyle
-
-```
 ```
 ### Labels with counts for Percentil_group
-
+```
 percentil_counts <- data_complete %>%
   count(Percentil_group)
 percentil_labels <- setNames(paste0(percentil_counts$Percentil_group, " (", percentil_counts$n, ")"), percentil_counts$Percentil_group)
 
 ```
-```
 ### --- 5. 5. PERMANOVA ---
-```{r}
+```
 set.seed(123)
 adonis_Percentil <- adonis2(dist_matrix ~ Percentil_group, data = data_complete)
 adonis_Age <- adonis2(dist_matrix ~ Age_group, data = data_complete)
@@ -152,11 +140,9 @@ cat("PERMANOVA RESULTS:\n")
 print(adonis_Percentil)
 print(adonis_Age)
 print(adonis_Lifestyle)
-
 ```
+### --- 6. 6. UNIFIED THEME --
 ```
-### --- 6. 6. UNIFIED THEME ---
-```{r}
 custom_theme <- theme_minimal(base_size = 11) +
   theme(
     plot.title = element_text(hjust = 0.5, face = "plain", size = 12),
@@ -169,29 +155,24 @@ custom_theme <- theme_minimal(base_size = 11) +
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank()
   )
-
 ```
+### --- 7. 7. 1 PLOTS ---
+#### Labels with counts for Age_group
 ```
-### --- 7. 7. PLOTS ---
-```
-### Labels with counts for Age_group
-```{r}
 age_counts <- data_complete %>%
   count(Age_group)
 age_labels <- setNames(paste0(age_counts$Age_group, " (", age_counts$n, ")"), age_counts$Age_group)
 
 ```
+#### Labels with counts for Lifestyle
 ```
-### Labels with counts for Lifestyle
-```{r}
 lifestyle_counts <- data_complete %>%
   count(Lifestyle)
 lifestyle_labels <- setNames(paste0(lifestyle_counts$Lifestyle, " (", lifestyle_counts$n, ")"), lifestyle_counts$Lifestyle)
 
 ```
+### --- 7. 7. 2 PLOTS ---
 ```
-### --- 7. 7. PLOTS ---
-```{r}
 p_percentil <- ggplot(scores_pcoa, aes(Dim1, Dim2, color = Percentil_group)) +
   geom_point(size = 1.8, alpha = 0.6) +
   labs(title = "PCoA: Percentil Group", color = "Percentil Group") +
@@ -201,11 +182,9 @@ p_percentil <- ggplot(scores_pcoa, aes(Dim1, Dim2, color = Percentil_group)) +
     "Underweight" = "#E69F00"
   ), labels = percentil_labels) +
   custom_theme
-
-```
 ```
 ### Counts across the whole dataset for Age_group and Lifestyle
-```{r}
+```
 age_counts_full <- data %>%
   filter(!is.na(Age_group)) %>%
   count(Age_group)
@@ -219,9 +198,8 @@ lifestyle_counts_full <- data %>%
 lifestyle_labels_full <- setNames(paste0(lifestyle_counts_full$Lifestyle, " (", lifestyle_counts_full$n, ")"), lifestyle_counts_full$Lifestyle)
 
 ```
-```
 ### Use these complete labels in the plots
-```{r}
+```
 p_age <- ggplot(scores_pcoa, aes(Dim1, Dim2, color = Age_group)) +
   geom_point(size = 1.8, alpha = 0.6) +
   labs(title = "PCoA: Age Group", color = "Age Group") +
@@ -237,12 +215,9 @@ p_lifestyle <- ggplot(scores_pcoa, aes(Dim1, Dim2, color = Lifestyle)) +
   ), labels = lifestyle_labels_full) +
   custom_theme
 
-
-
-```
 ```
 ### Create data_filtered for correlation with Percentil_num and Lifestyle_num
-```{r}
+```
 data_filtered <- data_complete %>%
   mutate(
     Lifestyle_num = ifelse(Lifestyle == "Urban", 1, 0),
@@ -255,9 +230,8 @@ data_filtered <- data_complete %>%
   )
 
 ```
-```
 ### Correlation with Percentil_num, Age, and Lifestyle_num
-```{r}
+```
 cor_data <- data_filtered %>% 
   select(Percentil_num, Age, Lifestyle_num) %>% 
   na.omit()
@@ -283,15 +257,12 @@ p_corr <- ggcorrplot(
   )
 
 ```
-```
 ### --- 9. 9. COMBINE PLOTS ---
-```{r}
-library(patchwork)
-
 ```
+library(patchwork)
 ```
 ### Themes to adjust margins by row
-```{r}
+```
 custom_theme_top <- custom_theme + theme(plot.margin = margin(t = 8, r = 8, b = 0, l = 8))
 custom_theme_bottom <- custom_theme + theme(plot.margin = margin(t = 0, r = 8, b = 8, l = 8))
 
@@ -305,22 +276,9 @@ final_plot <- (p_percentil + p_age) / (p_lifestyle + p_corr) +
   plot_annotation(tag_levels = "A")
 
 print(final_plot)
-
-
-
-
-
-
-
-
-
-
-
-
-```
 ```
 ### --- Load required libraries ---
-```{r}
+```
 library(ggplot2)
 library(dplyr)
 library(ggpubr)
@@ -330,9 +288,8 @@ library(patchwork)
 library(tibble)
 
 ```
-```
 ### --- Load data ---
-```{r}
+```
 data <- read.csv(
   file = "/home/alumno21/axel/files/data_207_3.csv",
   header = TRUE,
@@ -343,16 +300,13 @@ data <- read.csv(
 )
 
 ```
-```
 ### Remove empty columns and rows
-```{r}
+```
 data <- data[, colSums(!is.na(data)) > 0]
 data <- data[rowSums(is.na(data)) < ncol(data), ]
-
-```
 ```
 ### Create derived variables
-```{r}
+```
 data <- data %>%
   mutate(
     Age_group_recode = case_when(
@@ -382,16 +336,14 @@ data <- data %>%
   )
 
 ```
-```
 ### Filter for analysis (only rows without NA in key variables)
-```{r}
+```
 data_filtered <- data %>%
   filter(!is.na(BMI), !is.na(Age), !is.na(Percentil_formulas), !is.na(Age_group), !is.na(Lifestyle))
 
 ```
-```
 ### --- Define comparisons for the statistical test ---
-```{r}
+```
 comparisons_list <- list(
   c("Male Rural", "Male Urban"),
   c("Female Rural", "Female Urban"),
@@ -409,9 +361,8 @@ comparisons_child <- list(
 comparisons_adult <- comparisons_child  # mismo set para ambos si quieres
 
 ```
-```
 ### Create labels with total counts from the original dataset for Lifestyle and Percentil_group
-```{r}
+```
 labels_lifestyle <- data %>%
   filter(!is.na(Lifestyle)) %>%
   count(Lifestyle) %>%
@@ -427,9 +378,8 @@ labels_percentil_group <- data %>%
   deframe()
 
 ```
-```
 ### --- Plot 1: BMI density by Lifestyle (filtered data, full legend) ---
-```{r}
+```
 plot1 <- ggplot(data_filtered, aes(x = BMI, fill = Lifestyle)) +
   geom_density(alpha = 0.5) +
   scale_fill_manual(
@@ -452,9 +402,8 @@ plot1 <- ggplot(data_filtered, aes(x = BMI, fill = Lifestyle)) +
   )
 
 ```
-```
 ### --- Plot 2: Age density by Percentil_group ---
-```{r}
+```
 plot2 <- ggplot(data_filtered, aes(x = Age, fill = Percentil_group)) +
   geom_density(alpha = 0.6) +
   scale_fill_manual(
@@ -479,32 +428,26 @@ plot2 <- ggplot(data_filtered, aes(x = Age, fill = Percentil_group)) +
     y = "Density",
     fill = "Percentil Group"
   )
-
-
-```
 ```
 ### Calculate n by group and age (already done)
-```{r}
+```
 group_counts <- data_filtered %>%
   count(Age_group_recode, Gender_Lifestyle)
 
 ```
-```
 ### Position to place the texts (n) below the X axis
-```{r}
+```
 y_pos_n <- min(data_filtered$BMI, na.rm = TRUE) - 2  # ajusta -2 según tu rango de BMI
 
 ```
-```
 ### Create text label for n
-```{r}
+```
 group_counts <- group_counts %>%
   mutate(n_label = paste0("n = ", n))
 
 ```
-```
 ### Plot with geom_text for n
-```{r}
+```
 plot3 <- ggplot(data_filtered, aes(x = Gender_Lifestyle, y = BMI, fill = Gender_Lifestyle)) +
   geom_boxplot(width = 0.5, outlier.shape = NA, alpha = 0.9) +
   geom_jitter(position = position_jitter(width = 0.15), size = 0.6, alpha = 0.3) +
@@ -516,9 +459,8 @@ plot3 <- ggplot(data_filtered, aes(x = Gender_Lifestyle, y = BMI, fill = Gender_
     "Female Urban" = "#F2A104"
   )) +
 ```
-```
 ### Add n below each bar
-```{r}
+```
   geom_text(
     data = group_counts,
     aes(x = Gender_Lifestyle, y = y_pos_n, label = n_label),
@@ -587,15 +529,9 @@ combined_plot <- (plot1 | plot2)  / plot3 +
 
 print(combined_plot)
 
-
-
-
-
 ```
+## FINAL FIG. 1 COMPOSED
 ```
-### FINAL FIG. 1 COMPOSED
-```{r}
-
 plot1 <- plot1 + theme(plot.title = element_blank())
 plot2 <- plot2 + theme(plot.title = element_blank())
 plot33 <- plot3 + theme(plot.title = element_blank())
@@ -615,8 +551,3 @@ combined_plot <- (plot1 | plot2)  / (plot3 |p_lifestyle) +
 
 print(combined_plot)
 ```
-```
-
-
-
- 
