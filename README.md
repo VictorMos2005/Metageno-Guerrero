@@ -67,8 +67,8 @@ library(ggcorrplot)
 library(patchwork)
 
 ```
-``` {r}
 ### --- 1. 1. DATA LOADING AND CLEANING ---
+``` {r}
 
 data <- read.csv(
   file = "/home/alumno21/axel/files/data_207_3.csv",
@@ -80,23 +80,22 @@ data <- read.csv(
 )
 
 ```
-``` {r}
 ### Remove empty columns and rows (only those completely empty)
+
+``` {r}
 
 data <- data[, colSums(!is.na(data)) > 0]
 data <- data[rowSums(is.na(data)) < ncol(data), ]
 
 ```
-```
 ### Numeric variables
-
+```
 data$BMI <- as.numeric(data$BMI)
 data$Age <- as.numeric(data$Age)
 
 ```
-```
 ### --- 2. 2. DERIVED VARIABLES ---
-
+```
 data <- data %>%
   mutate(
     Percentil_group = case_when(
