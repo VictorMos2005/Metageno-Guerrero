@@ -21,8 +21,9 @@ This repository contains the automatized pipeline used in the article [...] for 
   - [Taxonomic Analysis](#taxonomic-analysis)
 
 Figures
-  - [PCoA in the anthropometric–demographic space and its association with BMI percentile, age group, and lifestyle](#PCoA-in-the-anthropometric-demographic-space-and-its-association-with-BMI-percentile,-age-group,-and-lifestyle)
-  - [Alpha and beta diversity of Rural and Urban metagenomes.](#Alpha-and-beta-diversity-of-Rural-and-Urban-metagenomes.)
+ - [PCoA in the anthropometric–demographic space and its association with BMI percentile, age group, and lifestyle](#pcoa-in-the-anthropometric-demographic-space-and-its-association-with-bmi-percentile-age-group-and-lifestyle)
+
+- [Alpha and beta diversity of Rural and Urban metagenomes.](#alpha-and-beta-diversity-of-rural-and-urban-metagenomes)
 
 ---
 
