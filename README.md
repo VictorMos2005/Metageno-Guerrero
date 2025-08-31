@@ -20,6 +20,9 @@ This repository contains the automatized pipeline used in the article [...] for 
   - [Diveristy](#diversity)
   - [Taxonomic Analysis](#taxonomic-analysis)
 
+[Figures](#Figures) 
+  - FIGURE 1. PCoA in the anthropometric–demographic space and its association with BMI percentile, age group, and lifestyle (#FIGURE 1. PCoA in the anthropometric–demographic space and its association with BMI percentile, age group, and lifestyle)
+
 ---
 
 ## Conda and the environment
@@ -550,4 +553,1247 @@ combined_plot <- (plot1 | plot2)  / (plot3 |p_lifestyle) +
   )
 
 print(combined_plot)
+```
+
+## Fig 3/5 (?)
+
+### Fig5. Alpha and beta diversity of Rural and Urban metagenomes.
+```{r}
+ 
+```
+### Loading Kaiju Merged from 0
+### --- Libraries ---
+```{r}
+library(dplyr)
+library(tidyr)
+ library(ggplot2)
+
+```
+### --- 0. Estandarizar nombres de columnas y archivos ---
+```{r}
+cat("\n--- Renombrando columnas de Kraken2 ---\n")
+kraken2_aligned <- kraken2_data_full %>%
+   rename(
+     Domain      = domain,
+   Supergroup  = supergroup,
+     Kingdom     = subgroup,
+     Phylum      = phylum,
+     Class       = class,
+     Order       = order,
+     Family      = family,
+     Genus       = genus,
+     Species     = species
+   )
+```
+### Assign key numeric columns
+```{r}
+kraken2_aligned$reads <- as.numeric(kraken2_data_full$reads_clade)
+ kraken2_aligned$percent <- as.numeric(kraken2_data_full$percent)
+
+ kaiju_data$percent <- as.numeric(kaiju_data$percent)
+ kaiju_data$reads   <- as.numeric(kaiju_data$reads)
+ 
+```
+### Set common file names
+```{r}
+ cat("\n--- Estandarizando nombres de archivo ---\n")
+ kaiju_data$file <- gsub("_kaiju\\.out$", "", kaiju_data$file)
+ kraken2_aligned$file <- gsub("\\.report$", "", kraken2_aligned$file)
+ 
+```
+### Confirm number of unique files
+```{r}
+ cat("\nArchivos únicos antes de unir:\n")
+ cat("  Kaiju:   ", length(unique(kaiju_data$file)), "\n")
+ cat("  Kraken2: ", length(unique(kraken2_aligned$file)), "\n")
+ 
+```
+### --- 1. Definir jerarquía taxonómica ---
+```{r}
+ tax_levels <- c("Species", "Genus", "Family", "Order", "Class", "Phylum", "Kingdom", "Supergroup", "Domain")
+ 
+```
+### --- 2. Función para detectar el nivel taxonómico más específico ---
+```{r}
+get_deepest_tax <- function(row) {
+  for (level in tax_levels) {
+     value <- row[[level]]
+     if (!is.na(value) && value != "") {
+       return(paste0(level, ":", value))
+     }
+   }
+   return(NA_character_)
+ }
+ 
+```
+### --- 3. Aplicar función a ambos datasets ---
+```{r}
+ cat("\nAplicando nivel taxonómico más específico...\n")
+ kaiju_data$deepest_tax <- apply(kaiju_data[, tax_levels], 1, get_deepest_tax)
+ kraken2_aligned$deepest_tax <- apply(kraken2_aligned[, tax_levels], 1, get_deepest_tax)
+ 
+```
+### Check example
+```{r}
+ cat("  Ejemplo Kaiju:     ", head(kaiju_data$deepest_tax, 1), "\n")
+ cat("  Ejemplo Kraken2:   ", head(kraken2_aligned$deepest_tax, 1), "\n")
+ 
+```
+### --- 4. Crear claves únicas: file + deepest_tax ---
+```{r}
+ kaiju_keys <- paste(kaiju_data$file, kaiju_data$deepest_tax)
+ kraken2_keys <- paste(kraken2_aligned$file, kraken2_aligned$deepest_tax)
+ 
+ cat("\nLongitudes de claves únicas:\n")
+ cat("  Kaiju:     ", length(unique(kaiju_keys)), "\n")
+ cat("  Kraken2:   ", length(unique(kraken2_keys)), "\n")
+
+```
+### --- 5. Filtrar Kraken2: solo lo que NO está en Kaiju ---
+```{r}
+ kraken2_filtered <- kraken2_aligned[!(kraken2_keys %in% kaiju_keys), ]
+ 
+ cat("\nLecturas después de filtrar Kraken2:\n")
+ cat("  Kraken2 original: ", nrow(kraken2_aligned), "\n")
+ cat("  Kraken2 filtrado: ", nrow(kraken2_filtered), "\n")
+ 
+```
+### --- 6. Unir datos sin duplicados lógicos ---
+```{r}
+ cat("\n--- Uniendo datasets (Kaiju + Kraken2 filtrado) ---\n")
+ kaiju_merged <- bind_rows(kaiju_data, kraken2_filtered)
+
+```
+### --- 7. Validaciones finales ---
+```{r}
+ cat("\nValidaciones finales:\n")
+cat("  Kaiju        - Total reads: ", sum(kaiju_data$reads, na.rm = TRUE), "\n")
+cat("  Kraken2 FILT - Total reads: ", sum(kraken2_filtered$reads, na.rm = TRUE), "\n")
+ cat("  Fusionado    - Total reads: ", sum(kaiju_merged$reads, na.rm = TRUE), "\n")
+ 
+cat("  Kaiju        - Nrows: ", nrow(kaiju_data), "\n")
+ cat("  Kraken2 FILT - Nrows: ", nrow(kraken2_filtered), "\n")
+ cat("  Fusionado    - Nrows: ", nrow(kaiju_merged), "\n")
+ 
+cat("  Archivos fusionados: ", length(unique(kaiju_merged$file)), "\n\n")
+ 
+ 
+```
+### library(dplyr)
+```{r}
+ 
+```
+### --- Renombrar columnas Kraken2 ---
+```{r}
+ kraken2_aligned <- kraken2_data_full %>%
+   rename(
+     Domain      = domain,
+     Supergroup  = supergroup,
+     Kingdom     = subgroup,
+     Phylum      = phylum,
+     Class       = class,
+     Order       = order,
+     Family      = family,
+     Genus       = genus,
+    Species     = species
+   )
+ 
+```
+### --- Usamos file_base de Kraken2 como referencia ---
+```{r}
+ kraken2_aligned$file <- kraken2_data_full$file_base
+ 
+```
+### --- Extraer file_base desde Kaiju ---
+```{r}
+ kaiju_data$file <- gsub("_kaiju\\.out$", "", basename(kaiju_data$file))
+kaiju_data$file <- gsub("\\.out$", "", kaiju_data$file)  # por si hay archivos erróneos
+ 
+```
+### Validar si coinciden los códigos
+```{r}
+ cat("\n--- Comparación de archivos únicos ---\n")
+ cat("Kaiju archivos únicos:   ", length(unique(kaiju_data$file)), "\n")
+ cat("Kraken2 archivos únicos: ", length(unique(kraken2_aligned$file)), "\n")
+ cat("Coincidencias exactas:   ", length(intersect(unique(kaiju_data$file), unique(kraken2_aligned$file))), "\n")
+ cat("Diferencias:             ", length(setdiff(unique(kraken2_aligned$file), unique(kaiju_data$file))), "\n")
+ 
+```
+### --- Establecer niveles taxonómicos ---
+```{r}
+ tax_levels <- c("Species", "Genus", "Family", "Order", "Class", "Phylum", "Kingdom", "Supergroup", "Domain")
+ 
+```
+### --- Detectar nivel más específico ---
+```{r}
+ get_deepest_tax <- function(row) {
+   for (level in tax_levels) {
+     value <- row[[level]]
+     if (!is.na(value) && value != "") return(paste0(level, ":", value))
+   }
+   return(NA_character_)
+ }
+ 
+ kaiju_data$deepest_tax <- apply(kaiju_data[, tax_levels], 1, get_deepest_tax)
+ kraken2_aligned$deepest_tax <- apply(kraken2_aligned[, tax_levels], 1, get_deepest_tax)
+ 
+```
+### --- Claves únicas ---
+```{r}
+ kaiju_keys   <- paste(kaiju_data$file, kaiju_data$deepest_tax)
+ kraken2_keys <- paste(kraken2_aligned$file, kraken2_aligned$deepest_tax)
+ 
+```
+### --- Conversión de valores numéricos ---
+```{r}
+kaiju_data$percent   <- as.numeric(kaiju_data$percent)
+ kaiju_data$reads     <- as.numeric(kaiju_data$reads)
+ kraken2_aligned$reads   <- as.numeric(kraken2_aligned$reads_clade)
+kraken2_aligned$percent <- as.numeric(kraken2_aligned$percent)
+ 
+```
+### --- Filtrar duplicados ---
+```{r}
+kraken2_filtered <- kraken2_aligned[!(kraken2_keys %in% kaiju_keys), ]
+ 
+```
+### --- Unir ---
+```{r}
+ kaiju_merged <- bind_rows(kaiju_data, kraken2_filtered)
+ 
+```
+### --- Asignar file_base y Group al objeto fusionado ---
+```{r}
+ kaiju_merged <- kaiju_merged %>%
+  mutate(
+     file_base = gsub("_kaiju\\.out$", "", basename(file)),  # extraer nombre base
+     Group = case_when(
+       file_base %in% rural_files_kaiju ~ "Rural",
+       file_base %in% urban_files_kaiju ~ "Urban",
+       TRUE ~ NA_character_
+    )
+   )
+ 
+```
+### Asegurar que reads sea numérico
+```{r}
+ kaiju_merged$reads <- as.numeric(kaiju_merged$reads)
+ 
+```
+### Replace NA or empty values in Order and Genus with "Unclassified"
+```{r}
+kaiju_merged$Order[is.na(kaiju_merged$Order) | kaiju_merged$Order == ""] <- "Unclassified"
+ kaiju_merged$Genus[is.na(kaiju_merged$Genus) | kaiju_merged$Genus == ""] <- "Unclassified"
+ 
+ 
+```
+### --- Listas Urban y Rural adaptadas con sufijo "_kaiju.out" ---
+```{r}
+ urban_files_kaiju <- paste0(c("37082_2#1", "37082_1#20", "37082_1#27", "37035_2#13", "37035_1#29",
+                               "37082_2#14", "37035_2#12", "37035_2#6", "37082_1#17", "37035_2#14",
+                              "37082_1#26", "37035_1#30", "37035_1#32", "37082_1#15", "37082_2#15",
+                               "37082_1#13", "37035_2#10", "37082_1#31", "37035_2#17", "37035_2#8",
+                               "37035_2#23", "37035_2#31", "37035_2#24", "37082_2#5", "36703_3#5",
+                               "37082_1#10", "36703_3#7", "37082_2#9", "37082_2#3", "37035_2#2",
+                               "37035_2#3", "37035_2#19", "37035_2#21", "36703_3#1", "37082_1#24",
+                               "36703_3#2", "37035_2#4", "37035_2#15", "37035_2#18", "37035_2#28",
+                               "37082_2#13", "37082_1#22", "37082_1#29", "37082_1#19", "37035_2#30",
+                               "37082_1#16", "37035_1#31", "37035_2#7", "37082_1#30", "37035_2#16",
+                               "37082_2#11", "37082_1#14", "37035_2#5", "37082_2#4", "37082_1#18",
+                               "37035_2#1", "37082_1#23", "37082_2#12", "37082_1#11", "37082_1#12",
+                               "37035_2#11", "37035_2#25", "37082_1#32", "37082_1#9", "37035_2#29",
+                               "37082_1#21", "37082_2#2", "37035_2#27", "36703_3#3", "37082_2#6",
+                               "37035_2#20", "37082_2#7", "37082_2#8", "37082_2#10", "37082_1#28",
+                             "36703_3#10", "37035_2#9", "37082_1#25", "36703_3#8", "36703_3#9",
+                               "37035_2#26", "36703_3#6", "37035_2#32", "36703_3#4", "37035_2#22"), 
+                             "_kaiju.out")
+  rural_files_kaiju <- paste0(c("37082_3#17", "37082_3#15", "37035_1#22", "36703_3#31", "37082_2#24",
+                               "36703_3#26", "37035_7#10", "36703_3#21", "37082_2#22", "37035_7#2",
+                              "37082_3#7", "37035_7#6", "37035_1#7", "37035_7#9", "37082_2#30",
+                               "37035_1#18", "37035_7#4", "37082_3#13", "37082_3#32", "37035_1#8",
+                               "37035_7#7", "37035_1#19", "37082_3#29", "37035_7#13", "37035_7#12",
+                               "37082_2#16", "36703_3#25", "37082_3#27", "37082_3#5", "37082_3#21",
+                               "37082_2#19", "37082_3#16", "37035_1#5", "37082_3#1", "37035_7#11",
+                               "37035_7#5", "36703_3#13", "37035_7#14", "37035_1#1", "37082_3#11",
+                              "37035_1#10", "37035_1#12", "37082_3#4", "36703_3#17", "36703_3#27",
+                               "37082_3#19", "37082_2#18", "36703_3#29", "36703_3#12", "36703_3#32",
+                               "37035_1#15", "37035_1#27", "37035_1#13", "37035_7#8", "37035_1#6",
+                               "37082_3#24", "36703_3#30", "37035_7#1", "37035_1#16", "37035_7#15",
+                               "37082_3#26", "37035_1#23", "37035_1#2", "37082_2#27", "37035_7#3",
+                               "37082_2#20", "36703_3#16", "37082_3#8", "37035_1#25", "36703_3#14",
+                               "37082_3#3", "37035_1#4", "37082_2#29", "37082_3#30", "37082_2#31",
+                               "37035_7#22", "37035_7#16", "37082_2#17", "36703_3#18", "37035_1#11",
+                               "37035_1#3", "37035_1#14", "37082_3#9", "36703_3#23", "37082_2#28",
+                               "37082_2#21", "37082_3#31", "36703_3#20", "37082_2#25", "36703_3#19",
+                               "37082_2#26", "37082_3#6", "37035_1#17", "37082_2#23", "36703_3#15",
+                               "36703_3#28", "37082_3#12", "37082_2#32", "37082_3#10", "36703_3#22",
+                               "37082_3#28", "36703_3#24", "37082_3#18", "37082_3#20", "37035_1#24",
+                               "37082_3#23", "37082_3#2", "37035_1#20", "37082_3#22", "37082_3#25",
+                               "37082_3#14", "37035_1#9", "36703_3#11", "37035_1#21", "37035_7#20",
+                               "37035_7#17", "37035_7#21", "37035_7#19", "37035_1#26", "37035_7#24",
+                               "37035_7#18", "37035_7#23", "37035_7#25"),
+                             "_kaiju.out")
+ 
+```
+### --- Asignar correctamente file_base y Group ---
+```{r}
+ kaiju_merged <- kaiju_merged %>%
+   mutate(
+     file_base = paste0(gsub("\\.out$", "", basename(file)), "_kaiju.out"),
+     Group = case_when(
+       file_base %in% urban_files_kaiju ~ "Urban",
+       file_base %in% rural_files_kaiju ~ "Rural",
+       TRUE ~ NA_character_
+     )
+   ) %>%
+   filter(!is.na(Group))
+ 
+ 
+```
+### Guardar como CSV
+```{r}
+write.csv(kaiju_merged, "kaiju_merged_final.csv", row.names = FALSE)
+ 
+```
+### Guardar como TXT (tabulado)
+```{r}
+write.table(kaiju_merged, "kaiju_merged_final.txt",
+           sep = "\t", quote = FALSE, row.names = FALSE)
+ 
+```
+### Completion of Kaiju Merged from 0
+```{r}
+ 
+
+
+
+
+```
+### GENERAL ALPHA DIVERSITY
+###
+```{r}
+
+
+
+
+```
+### Ensure independence
+```{r}
+
+rm(list = ls(envir = .GlobalEnv), envir = .GlobalEnv); invisible(gc())
+
+```
+### --- 1. CARGA Y LIMPIEZA DE DATOS ---
+```{r}
+kaiju_merged <- read.csv(
+  file = "/home/alumno21/axel/files/kaiju_merged_final.csv",
+  header = TRUE,
+  sep = ",",
+  fileEncoding = "latin1",
+  stringsAsFactors = FALSE,
+  na.strings = c("", "NA")
+)
+
+```
+### --- Listas Urban y Rural adaptadas con sufijo "_kaiju.out" ---
+```{r}
+urban_files_kaiju <- paste0(c("37082_2#1", "37082_1#20", "37082_1#27", "37035_2#13", "37035_1#29",
+                              "37082_2#14", "37035_2#12", "37035_2#6", "37082_1#17", "37035_2#14",
+                              "37082_1#26", "37035_1#30", "37035_1#32", "37082_1#15", "37082_2#15",
+                              "37082_1#13", "37035_2#10", "37082_1#31", "37035_2#17", "37035_2#8",
+                              "37035_2#23", "37035_2#31", "37035_2#24", "37082_2#5", "36703_3#5",
+                              "37082_1#10", "36703_3#7", "37082_2#9", "37082_2#3", "37035_2#2",
+                              "37035_2#3", "37035_2#19", "37035_2#21", "36703_3#1", "37082_1#24",
+                              "36703_3#2", "37035_2#4", "37035_2#15", "37035_2#18", "37035_2#28",
+                              "37082_2#13", "37082_1#22", "37082_1#29", "37082_1#19", "37035_2#30",
+                              "37082_1#16", "37035_1#31", "37035_2#7", "37082_1#30", "37035_2#16",
+                              "37082_2#11", "37082_1#14", "37035_2#5", "37082_2#4", "37082_1#18",
+                              "37035_2#1", "37082_1#23", "37082_2#12", "37082_1#11", "37082_1#12",
+                              "37035_2#11", "37035_2#25", "37082_1#32", "37082_1#9", "37035_2#29",
+                              "37082_1#21", "37082_2#2", "37035_2#27", "36703_3#3", "37082_2#6",
+                              "37035_2#20", "37082_2#7", "37082_2#8", "37082_2#10", "37082_1#28",
+                              "36703_3#10", "37035_2#9", "37082_1#25", "36703_3#8", "36703_3#9",
+                              "37035_2#26", "36703_3#6", "37035_2#32", "36703_3#4", "37035_2#22"), 
+                            "_kaiju.out")
+
+rural_files_kaiju <- paste0(c("37082_3#17", "37082_3#15", "37035_1#22", "36703_3#31", "37082_2#24",
+                              "36703_3#26", "37035_7#10", "36703_3#21", "37082_2#22", "37035_7#2",
+                              "37082_3#7", "37035_7#6", "37035_1#7", "37035_7#9", "37082_2#30",
+                              "37035_1#18", "37035_7#4", "37082_3#13", "37082_3#32", "37035_1#8",
+                              "37035_7#7", "37035_1#19", "37082_3#29", "37035_7#13", "37035_7#12",
+                              "37082_2#16", "36703_3#25", "37082_3#27", "37082_3#5", "37082_3#21",
+                              "37082_2#19", "37082_3#16", "37035_1#5", "37082_3#1", "37035_7#11",
+                              "37035_7#5", "36703_3#13", "37035_7#14", "37035_1#1", "37082_3#11",
+                              "37035_1#10", "37035_1#12", "37082_3#4", "36703_3#17", "36703_3#27",
+                              "37082_3#19", "37082_2#18", "36703_3#29", "36703_3#12", "36703_3#32",
+                              "37035_1#15", "37035_1#27", "37035_1#13", "37035_7#8", "37035_1#6",
+                              "37082_3#24", "36703_3#30", "37035_7#1", "37035_1#16", "37035_7#15",
+                              "37082_3#26", "37035_1#23", "37035_1#2", "37082_2#27", "37035_7#3",
+                              "37082_2#20", "36703_3#16", "37082_3#8", "37035_1#25", "36703_3#14",
+                              "37082_3#3", "37035_1#4", "37082_2#29", "37082_3#30", "37082_2#31",
+                              "37035_7#22", "37035_7#16", "37082_2#17", "36703_3#18", "37035_1#11",
+                              "37035_1#3", "37035_1#14", "37082_3#9", "36703_3#23", "37082_2#28",
+                              "37082_2#21", "37082_3#31", "36703_3#20", "37082_2#25", "36703_3#19",
+                              "37082_2#26", "37082_3#6", "37035_1#17", "37082_2#23", "36703_3#15",
+                              "36703_3#28", "37082_3#12", "37082_2#32", "37082_3#10", "36703_3#22",
+                              "37082_3#28", "36703_3#24", "37082_3#18", "37082_3#20", "37035_1#24",
+                              "37082_3#23", "37082_3#2", "37035_1#20", "37082_3#22", "37082_3#25",
+                              "37082_3#14", "37035_1#9", "36703_3#11", "37035_1#21", "37035_7#20",
+                              "37035_7#17", "37035_7#21", "37035_7#19", "37035_1#26", "37035_7#24",
+                              "37035_7#18", "37035_7#23", "37035_7#25"),
+                            "_kaiju.out")
+
+```
+### --- Asignar correctamente file_base y Group ---
+```{r}
+kaiju_merged <- kaiju_merged %>%
+  mutate(
+    file_base = paste0(gsub("\\.out$", "", basename(file)), "_kaiju.out"),
+    Group = case_when(
+      file_base %in% urban_files_kaiju ~ "Urban",
+      file_base %in% rural_files_kaiju ~ "Rural",
+      TRUE ~ NA_character_
+    )
+  ) %>%
+  filter(!is.na(Group))
+
+```
+### ---------- 0) Clave taxonómica más fina disponible ----------
+### (se mantiene por compatibilidad, pero no se usa porque trabajaremos a nivel Genus)
+```{r}
+tax_key <- if ("taxon_id" %in% names(kaiju_merged)) "taxon_id" else "Organism"
+
+```
+### ---------- 1) Abundancias por muestra a nivel GENUS ----------
+### - NO filtramos Domain/Kingdom.
+### - Consolidamos por muestra + Genus.
+```{r}
+alltaxa_by_sample <- kaiju_merged %>%
+  mutate(
+    Genus = ifelse(is.na(Genus) | Genus == "", "Unclassified", Genus)
+  ) %>%
+  group_by(file_base, Group, Genus) %>%
+  summarise(reads = sum(reads, na.rm = TRUE), .groups = "drop") %>%
+  group_by(file_base, Group) %>%
+  mutate(rel_abund = reads / sum(reads, na.rm = TRUE)) %>%
+  ungroup()
+
+```
+### (Chequeo opcional)
+```{r}
+message("Rango de reads totales por muestra (nivel Genus):")
+print(
+  alltaxa_by_sample %>%
+    group_by(file_base) %>%
+    summarise(TotalReads = sum(reads), .groups = "drop") %>%
+    summarise(min = min(TotalReads), q1 = quantile(TotalReads, .25),
+              median = median(TotalReads), q3 = quantile(TotalReads, .75),
+              max = max(TotalReads))
+)
+
+```
+### ---------- 2) Métricas de alpha diversidad por muestra ----------
+```{r}
+alpha_per_sample <- alltaxa_by_sample %>%
+  group_by(file_base, Group) %>%
+  summarise(
+    observed_taxa = sum(reads > 0),                                   # riqueza total (nº de géneros)
+    H = { p <- rel_abund[rel_abund > 0]; -sum(p * log(p)) },          # Shannon (ln)
+    simpson = 1 - sum(rel_abund^2),                                   # Gini–Simpson
+    pielou = ifelse(observed_taxa > 1, H / log(observed_taxa), NA),   # Pielou
+    berger_parker = max(rel_abund),                                   # Dominancia
+    .groups = "drop"
+  )
+
+```
+### ---------- 3) Formato largo para facetear ----------
+```{r}
+alpha_long <- alpha_per_sample %>%
+  pivot_longer(
+    cols = c(observed_taxa, H, simpson, pielou, berger_parker),
+    names_to = "metric", values_to = "value"
+  ) %>%
+  mutate(
+    metric = factor(
+      metric,
+      levels = c("observed_taxa","H","simpson","pielou","berger_parker"),
+      labels = c("Observed Taxa","Shannon Index","Simpson Index",
+                 "Pielou's Evenness","Berger–Parker")
+    )
+  )
+
+```
+### ---------- 4) Etiquetas n por grupo ----------
+```{r}
+n_labels <- alpha_long %>%
+  group_by(metric, Group) %>%
+  summarise(n = dplyr::n(), ymax = max(value, na.rm = TRUE), .groups = "drop") %>%
+  mutate(label = paste0("n = ", n))
+
+```
+### ---------- 5) Wilcoxon y estrellas ----------
+```{r}
+p_stars <- function(p){
+  if (is.na(p)) "" else if (p < 0.001) "***" else if (p < 0.01) "**"
+  else if (p < 0.05) "*" else ""
+}
+
+wilcox_df <- alpha_long %>%
+  group_by(metric) %>%
+  summarise(
+    p = tryCatch(wilcox.test(value ~ Group)$p.value, error = function(e) NA_real_),
+    ymax = max(value, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(star = vapply(p, p_stars, character(1)),
+         x = 1.5, y = ymax * 1.02)
+
+```
+### ---------- 6) Estilo y gráfico ----------
+```{r}
+pal <- c(Rural = "#E9B44C", Urban = "#4F86C6")
+
+library(grid)  # por unit()
+
+```
+### --- Tema base limpio ---
+```{r}
+base_theme <- theme_minimal(base_size = 11) +
+  theme(
+    panel.background = element_rect(fill = "white", colour = NA),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    
+```
+### Solo bordes inferior e izquierdo (líneas de ejes)
+```{r}
+    panel.border = element_blank(),
+    axis.line.x = element_line(linewidth = 0.4, colour = "black"),
+    axis.line.y = element_line(linewidth = 0.4, colour = "black"),
+    
+```
+### Facetas
+```{r}
+    strip.placement = "outside",
+    strip.clip = "off",
+    strip.background = element_rect(fill = "white", colour = NA),
+    strip.text.x = element_text(
+      size = 9,
+      hjust = 0, vjust = 0.5,
+      margin = margin(t = 6, r = 6, b = 6, l = 6)
+    ),
+    
+    panel.spacing.x = unit(16, "pt"),
+    panel.spacing.y = unit(8, "pt"),
+    plot.title = element_text(hjust = 0.5, face = "plain"),
+    plot.title.position = "plot",
+    plot.margin = margin(12, 16, 12, 12),
+    legend.position = "right"
+  )
+
+p_alpha <- ggplot(alpha_long, aes(Group, value, fill = Group)) +
+  geom_boxplot(width = 0.65, alpha = 0.85, outlier.shape = NA) +
+  geom_jitter(width = 0.15, size = 0.3, alpha = 0.6) +
+  facet_wrap(~ metric, scales = "free_y", nrow = 1, strip.position = "top") +
+  scale_fill_manual(values = pal) +
+  scale_y_continuous(expand = expansion(mult = c(0.02, 0.10))) +
+  labs(x = NULL, y = NULL,
+       title = "Alpha diversity analysis across lifestyle groups (all taxa)") +
+  base_theme +
+  coord_cartesian(clip = "off") +
+  geom_text(
+    data = wilcox_df,
+    aes(x = x, y = y, label = star),
+    inherit.aes = FALSE, size = 8
+  )
+
+p_alpha
+
+
+```
+### BACTERIA ALPHA DIVERSITY
+```{r}
+
+
+```
+### -------- PALETA Y TEMA --------
+```{r}
+pal <- c(Rural = "#E9B44C", Urban = "#4F86C6")
+
+base_theme <- theme_minimal(base_size = 11) +
+  theme(
+    panel.background = element_rect(fill = "white", colour = NA),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line.x = element_line(linewidth = 0.4, colour = "black"),
+    axis.line.y = element_line(linewidth = 0.4, colour = "black"),
+    strip.placement = "outside", strip.clip = "off",
+    strip.background = element_rect(fill = "white", colour = NA),
+    strip.text.x = element_text(size = 9, hjust = 0, vjust = 0.5,
+                                margin = margin(t = 6, r = 6, b = 6, l = 6)),
+    panel.spacing.x = unit(16, "pt"),
+    panel.spacing.y = unit(8, "pt"),
+    plot.title = element_text(hjust = 0.5),
+    legend.position = "right",
+    plot.margin = margin(12, 16, 12, 12)
+  )
+
+p_stars <- function(p){
+  if (is.na(p)) "" else if (p < 0.001) "***" else if (p < 0.01) "**"
+  else if (p < 0.05) "*" else "ns"
+}
+
+```
+### -------- 1) FILTRAR BACTERIA Y TRABAJAR A NIVEL GENUS --------
+```{r}
+bact_genus <- kaiju_merged %>%
+  filter(Domain == "Bacteria") %>%
+  mutate(Genus = ifelse(is.na(Genus) | Genus == "", "Unclassified", Genus)) %>%
+  group_by(file_base, Group, Genus) %>%
+  summarise(reads = sum(reads, na.rm = TRUE), .groups = "drop") %>%
+  group_by(file_base, Group) %>%
+  mutate(rel_abund = reads / sum(reads, na.rm = TRUE)) %>%
+  ungroup()
+
+```
+### --- Chequeos opcionales ---
+```{r}
+message("Lecturas TOT por muestra (Bacteria, nivel Genus):")
+print(bact_genus %>%
+        group_by(file_base) %>%
+        summarise(TotalReads = sum(reads), .groups = "drop") %>%
+        summarise(min = min(TotalReads), q1 = quantile(TotalReads, .25),
+                  median = median(TotalReads), q3 = quantile(TotalReads, .75),
+                  max = max(TotalReads)))
+
+message("Top 10 géneros por lecturas (global, Bacteria):")
+print(bact_genus %>% group_by(Genus) %>%
+        summarise(reads = sum(reads), .groups = "drop") %>%
+        arrange(desc(reads)) %>% head(10))
+
+```
+### -------- 2) MÉTRICAS ALPHA POR MUESTRA --------
+```{r}
+alpha_bact_genus <- bact_genus %>%
+  group_by(file_base, Group) %>%
+  summarise(
+    observed_taxa = sum(reads > 0),                          # riqueza (nº de géneros)
+    H = { p <- rel_abund[rel_abund > 0]; -sum(p * log(p)) }, # Shannon (ln)
+    simpson = 1 - sum(rel_abund^2),                          # Gini–Simpson
+    pielou = ifelse(observed_taxa > 1, H / log(observed_taxa), NA_real_),
+    berger_parker = max(rel_abund),                          # Dominancia
+    .groups = "drop"
+  )
+
+alpha_long <- alpha_bact_genus %>%
+  pivot_longer(
+    cols = c(observed_taxa, H, simpson, pielou, berger_parker),
+    names_to = "metric", values_to = "value"
+  ) %>%
+  mutate(
+    metric = factor(metric,
+                    levels = c("observed_taxa","H","simpson","pielou","berger_parker"),
+                    labels = c("Observed","Shannon","Simpson",
+                               "Pielou","Berger–Parker"))
+  )
+
+```
+### -------- 3) WILCOXON Y ESTRELLAS --------
+```{r}
+wilcox_df <- alpha_long %>%
+  group_by(metric) %>%
+  summarise(
+    p = tryCatch(wilcox.test(value ~ Group)$p.value, error = function(e) NA_real_),
+    ymax = max(value, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(star = vapply(p, p_stars, character(1)),
+         x = 1.5, y = ymax * 1.02)
+
+```
+### -------- 4) GRÁFICO --------
+```{r}
+p_alpha_bact_genus <- ggplot(alpha_long, aes(Group, value, fill = Group)) +
+  geom_boxplot(width = 0.65, alpha = 0.85, outlier.shape = NA) +
+  geom_jitter(width = 0.15, size = 0.3, alpha = 0.6) +
+  facet_wrap(~ metric, scales = "free_y", nrow = 1, strip.position = "top") +
+  scale_fill_manual(values = pal) +
+  scale_y_continuous(expand = expansion(mult = c(0.02, 0.10))) +
+  labs(x = NULL, y = NULL,
+       title = "Alpha diversity across lifestyle groups (Bacteria at Genus level)") +
+  base_theme +
+  coord_cartesian(clip = "off") +
+  geom_text(data = wilcox_df, aes(x = x, y = y, label = star),
+            inherit.aes = FALSE, size = 8)
+
+p_alpha_bact_genus
+
+
+```
+### EUKARYOTA ALPHA DIVERSITY
+```{r}
+
+```
+### -------- PALETA Y TEMA --------
+```{r}
+pal <- c(Rural = "#E9B44C", Urban = "#4F86C6")
+
+base_theme <- theme_minimal(base_size = 11) +
+  theme(
+    panel.background = element_rect(fill = "white", colour = NA),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line.x = element_line(linewidth = 0.4, colour = "black"),
+    axis.line.y = element_line(linewidth = 0.4, colour = "black"),
+    strip.placement = "outside", strip.clip = "off",
+    strip.background = element_rect(fill = "white", colour = NA),
+    strip.text.x = element_text(size = 9, hjust = 0, vjust = 0.5,
+                                margin = margin(t = 6, r = 6, b = 6, l = 6)),
+    panel.spacing.x = unit(16, "pt"),
+    panel.spacing.y = unit(8, "pt"),
+    plot.title = element_text(hjust = 0.5),
+    legend.position = "right",
+    plot.margin = margin(12, 16, 12, 12)
+  )
+
+p_stars <- function(p){
+  if (is.na(p)) "" else if (p < 0.001) "***" else if (p < 0.01) "**"
+  else if (p < 0.05) "*" else ""
+}
+
+```
+### -------- 1) FILTRAR EUKARYOTA Y TRABAJAR A NIVEL GENUS --------
+```{r}
+euk_genus <- kaiju_merged %>%
+  filter(Domain == "Eukaryota") %>%
+  mutate(Genus = ifelse(is.na(Genus) | Genus == "", "Unclassified", Genus)) %>%
+  group_by(file_base, Group, Genus) %>%
+  summarise(reads = sum(reads, na.rm = TRUE), .groups = "drop") %>%
+  group_by(file_base, Group) %>%
+  mutate(rel_abund = reads / sum(reads, na.rm = TRUE)) %>%
+  ungroup()
+
+```
+### --- Chequeos opcionales ---
+```{r}
+message("Lecturas TOT por muestra (Eukaryota, nivel Genus):")
+print(euk_genus %>%
+        group_by(file_base) %>%
+        summarise(TotalReads = sum(reads), .groups = "drop") %>%
+        summarise(min = min(TotalReads), q1 = quantile(TotalReads, .25),
+                  median = median(TotalReads), q3 = quantile(TotalReads, .75),
+                  max = max(TotalReads)))
+
+message("Top 10 géneros por lecturas (global, Eukaryota):")
+print(euk_genus %>% group_by(Genus) %>%
+        summarise(reads = sum(reads), .groups = "drop") %>%
+        arrange(desc(reads)) %>% head(10))
+
+```
+### -------- 2) MÉTRICAS ALPHA POR MUESTRA --------
+```{r}
+alpha_euk_genus <- euk_genus %>%
+  group_by(file_base, Group) %>%
+  summarise(
+    observed_taxa = sum(reads > 0),                          # riqueza (nº de géneros)
+    H = { p <- rel_abund[rel_abund > 0]; -sum(p * log(p)) }, # Shannon (ln)
+    simpson = 1 - sum(rel_abund^2),                          # Gini–Simpson
+    pielou = ifelse(observed_taxa > 1, H / log(observed_taxa), NA_real_),
+    berger_parker = max(rel_abund),                          # Dominancia
+    .groups = "drop"
+  )
+
+alpha_long <- alpha_euk_genus %>%
+  pivot_longer(
+    cols = c(observed_taxa, H, simpson, pielou, berger_parker),
+    names_to = "metric", values_to = "value"
+  ) %>%
+  mutate(
+    metric = factor(metric,
+                    levels = c("observed_taxa","H","simpson","pielou","berger_parker"),
+                    labels = c("Observed","Shannon","Simpson ",
+                               "Pielou","Berger–Parker"))
+  )
+
+```
+### -------- 3) WILCOXON Y ESTRELLAS --------
+```{r}
+wilcox_df <- alpha_long %>%
+  group_by(metric) %>%
+  summarise(
+    p = tryCatch(wilcox.test(value ~ Group)$p.value, error = function(e) NA_real_),
+    ymax = max(value, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(star = vapply(p, p_stars, character(1)),
+         x = 1.5, y = ymax * 1.02)
+
+```
+### -------- 4) GRÁFICO --------
+```{r}
+p_alpha_euk_genus <- ggplot(alpha_long, aes(Group, value, fill = Group)) +
+  geom_boxplot(width = 0.65, alpha = 0.85, outlier.shape = NA) +
+  geom_jitter(width = 0.15, size = 0.3, alpha = 0.6) +
+  facet_wrap(~ metric, scales = "free_y", nrow = 1, strip.position = "top") +
+  scale_fill_manual(values = pal) +
+  scale_y_continuous(expand = expansion(mult = c(0.02, 0.10))) +
+  labs(x = NULL, y = NULL,
+       title = "Alpha diversity across lifestyle groups (Eukaryota at Genus level)") +
+  base_theme +
+  coord_cartesian(clip = "off") +
+  geom_text(data = wilcox_df, aes(x = x, y = y, label = star),
+            inherit.aes = FALSE, size = 8)
+
+p_alpha_euk_genus
+
+
+
+
+```
+### BETA DIVERSITY
+```{r}
+
+```
+### --- Libraries ---
+```{r}
+library(dplyr)
+library(tidyr)
+library(vegan)
+library(ggplot2)
+library(patchwork)
+library(uwot)
+library(tibble)
+library(grid)
+library(gtable)
+library(gridExtra)
+
+set.seed(42)  # Para reproducibilidad
+
+kaiju_merged$reads <- as.numeric(kaiju_merged$reads)
+kaiju_merged$Order[is.na(kaiju_merged$Order) | kaiju_merged$Order == ""] <- "Unclassified"
+
+```
+### --- Crear matriz de abundancia a nivel Order ---
+```{r}
+abundance_matrix <- kaiju_merged %>%
+  group_by(file_base, Order) %>%
+  summarise(reads = sum(reads, na.rm=TRUE), .groups = "drop") %>%
+  pivot_wider(names_from = Order, values_from = reads, values_fill = 0) %>%
+  column_to_rownames("file_base")
+
+```
+### --- Normalizar a abundancia relativa ---
+```{r}
+abundance_matrix_rel <- abundance_matrix / rowSums(abundance_matrix)
+
+```
+### --- Metadata para PERMANOVA y gráficos ---
+```{r}
+metadata_df <- data.frame(Sample = rownames(abundance_matrix_rel)) %>%
+  mutate(Group = case_when(
+    Sample %in% urban_files_kaiju ~ "Urban",   # ← usa las listas CON sufijo
+    Sample %in% rural_files_kaiju ~ "Rural",
+    TRUE ~ NA_character_
+  )) %>%
+  filter(!is.na(Group)) %>%
+  mutate(Group = factor(Group, levels = c("Urban","Rural")))
+
+abundance_matrix_rel <- abundance_matrix_rel[metadata_df$Sample, , drop = FALSE]
+
+
+```
+### --- Calcular distancias Bray-Curtis ---
+```{r}
+dist_bray <- vegdist(abundance_matrix_rel, method = "bray")
+
+```
+### --- PERMANOVA ---
+```{r}
+permanova_res <- adonis2(dist_bray ~ Group, data = metadata_df)
+print(permanova_res)
+
+r2_value <- round(permanova_res$R2[1], 3)
+p_value <- permanova_res$`Pr(>F)`[1]
+
+```
+### --- NMDS ---
+```{r}
+nmds_res <- metaMDS(dist_bray, k=2, trymax=100)
+nmds_df <- as.data.frame(nmds_res$points) %>%
+  mutate(Sample = rownames(nmds_res$points)) %>%
+  left_join(metadata_df, by = "Sample")
+
+```
+### --- PCoA ---
+```{r}
+pcoa_res <- cmdscale(dist_bray, k=2, eig=TRUE)
+pcoa_df <- as.data.frame(pcoa_res$points) %>%
+  setNames(c("PCoA1", "PCoA2")) %>%
+  mutate(Sample = rownames(abundance_matrix_rel)) %>%
+  left_join(metadata_df, by = "Sample")
+
+```
+### --- UMAP ---
+```{r}
+umap_res <- umap(abundance_matrix_rel, n_neighbors=15, metric="euclidean")
+umap_df <- as.data.frame(umap_res) %>%
+  setNames(c("UMAP1", "UMAP2")) %>%
+  mutate(Sample = rownames(abundance_matrix_rel)) %>%
+  left_join(metadata_df, by = "Sample")
+
+```
+### --- PCA (sobre matriz de abundancia relativa) ---
+```{r}
+pca_res <- prcomp(abundance_matrix_rel, scale. = TRUE)
+pca_df <- as.data.frame(pca_res$x[,1:2]) %>%
+  mutate(Sample = rownames(abundance_matrix_rel)) %>%
+  left_join(metadata_df, by = "Sample")
+
+```
+### --- Función base para ggplot ---
+```{r}
+base_plot <- function(df, x, y, title) {
+  ggplot(df, aes_string(x=x, y=y, color="Group")) +
+    geom_point(size=1.5, alpha=0.5) +
+    scale_color_manual(values = c("Urban" = "#0072B2", "Rural" = "#E69F00")) +
+    theme_minimal() +
+    labs(title = title, color = "Group") +
+    theme(plot.title = element_text(hjust = 0.15, face = "plain", size=10),
+          axis.title = element_text(face = "plain", size=9),   # Títulos de ejes sin negrita
+          axis.text = element_text(face = "plain"))
+}
+
+```
+### --- Crear plots sin leyenda ---
+```{r}
+p_nmds <- base_plot(nmds_df, "MDS1", "MDS2", "NMDS (Bray-Curtis)") + theme(legend.position = "none")
+p_pcoa <- base_plot(pcoa_df, "PCoA1", "PCoA2", "PCoA (Bray-Curtis)") + theme(legend.position = "none")
+p_umap <- base_plot(umap_df, "UMAP1", "UMAP2", "UMAP") + theme(legend.position = "none")
+p_pca  <- base_plot(pca_df, "PC1", "PC2", "PCA") + theme(legend.position = "none")
+
+```
+### --- Extraer leyenda de p_pcoa para poner a la derecha ---
+```{r}
+get_legend <- function(a_gplot) {
+  tmp <- ggplotGrob(a_gplot)
+  legend_index <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
+  legend <- tmp$grobs[[legend_index]]
+  return(legend)
+}
+
+legend_plot <- base_plot(pcoa_df, "PCoA1", "PCoA2", "PCoA (Bray-Curtis)") + theme(legend.position = "right")
+
+legend_grob <- get_legend(legend_plot)
+
+```
+### --- Crear texto estadístico ---
+```{r}
+annot_nms <- paste(
+  sprintf("PERMANOVA R² = %.3f", r2_value),
+  sprintf("p = %.3g", p_value),
+  sprintf("Stress NMDS = %.2f", nmds_res$stress),
+  sprintf("n (Rural) = %d", sum(metadata_df$Group == "Rural")),
+  sprintf("n (Urban) = %d", sum(metadata_df$Group == "Urban")),
+  sep = "\n"
+)
+
+caption_title <- textGrob(
+  "Statistics",
+  gp = gpar(fontsize = 8, fontface = "bold"),
+  x = unit(0, "npc"), hjust = 0
+)
+space <- nullGrob()
+space_height <- unit(4, "mm")
+caption_body <- textGrob(
+  annot_nms,
+  gp = gpar(fontsize = 8, fontface = "plain"),
+  x = unit(0, "npc"), hjust = 0
+)
+caption_grob <- arrangeGrob(
+  grobs = list(caption_title, space, caption_body),
+  ncol = 1,
+  heights = unit.c(grobHeight(caption_title), space_height, grobHeight(caption_body))
+)
+
+space_between_legend_and_text <- unit(15, "mm")
+legend_table <- gtable(
+  widths = unit(0.3, "npc"),
+  heights = unit.c(grobHeight(legend_grob), space_between_legend_and_text, grobHeight(caption_grob))
+)
+legend_table <- gtable_add_grob(legend_table, legend_grob, t = 1, l = 1)
+legend_table <- gtable_add_grob(legend_table, caption_grob, t = 3, l = 1)
+
+```
+### 2x2 plots grid without legend
+```{r}
+plots_grid <- (p_nmds + p_pcoa) / (p_umap + p_pca) +
+  plot_layout(guides = "collect") &
+  theme(
+    legend.position = "none",
+    plot.margin = margin(2, 2, 0, 2)
+  )
+
+```
+### Combine plots and legend + statistics closer, with adjusted widths
+```{r}
+combined_plot <- wrap_elements(plots_grid) + wrap_elements(legend_table) +
+  plot_layout(widths = c(8, 5))
+
+print(combined_plot)
+
+library(ggplot2)
+library(patchwork)
+library(gridExtra)
+
+```
+### 1) Márgenes cómodos por subplot (ni apretado ni holgado)
+```{r}
+tema_solo_dos_lineas_comfy <- theme(
+  panel.background   = element_rect(fill = "white", colour = NA),
+  plot.background    = element_rect(fill = "white", colour = NA),
+  panel.grid.major   = element_blank(),
+  panel.grid.minor   = element_blank(),
+  axis.text          = element_text(colour = "black"),
+  axis.title         = element_text(colour = "black"),
+  axis.ticks         = element_line(colour = "black"),
+  axis.line.x.bottom = element_line(colour = "black", linewidth = 0.5),
+  axis.line.x.top    = element_blank(),
+  axis.line.y.left   = element_line(colour = "black", linewidth = 0.5),
+  axis.line.y.right  = element_blank(),
+  plot.margin        = margin(6, 10, 6, 10)  # ↑ dale un poco de aire lateral
+)
+
+p_nmds <- p_nmds + tema_solo_dos_lineas_comfy
+p_pcoa <- p_pcoa + tema_solo_dos_lineas_comfy
+p_umap <- p_umap + tema_solo_dos_lineas_comfy
+p_pca  <- p_pca  + tema_solo_dos_lineas_comfy
+
+```
+### 2) Espaciado entre paneles del grid
+```{r}
+plots_grid <- (p_nmds + p_pcoa) / (p_umap + p_pca) +
+  plot_layout(guides = "collect") &
+  theme(
+    legend.position = "none",
+    plot.background = element_rect(fill = "white", colour = NA),
+    panel.spacing   = unit(6, "pt"),     # ← pequeño pero evita choques
+    plot.margin     = margin(0, 0, 0, 0)
+  )
+
+```
+### 3) Tags sin añadir bordes, pero con respiración mínima
+```{r}
+plots_grid_tagged <- plots_grid +
+  plot_annotation(tag_levels = "A") &
+  theme(
+    plot.tag          = element_text(size = 12),
+    plot.tag.position = c(0.02, 0.98),
+    plot.margin       = margin(2, 2, 2, 2)
+  )
+
+```
+### 4) Columna derecha más angosta y con separación moderada
+```{r}
+space_between_legend_and_text <- unit(15, "mm")  # ↓ antes 15 mm
+legend_table <- gtable(
+  widths  = unit(0.24, "npc"),
+  heights = unit.c(grobHeight(legend_grob),
+                   space_between_legend_and_text,
+                   grobHeight(caption_grob))
+)
+legend_table <- gtable_add_grob(legend_table, legend_grob, t = 1, l = 1)
+legend_table <- gtable_add_grob(legend_table, caption_grob, t = 3, l = 1)
+
+```
+### 5) Margen EXTERNO del conjunto (título no pegado ni chocado)
+```{r}
+combined_plot <-
+  wrap_elements(plots_grid_tagged) + wrap_elements(legend_table) +
+  plot_layout(widths = c(9.5, 3.5)) +
+  plot_annotation(
+    title = "Rural and urban beta diversity",
+    theme = theme(
+      plot.title   = element_text(hjust = 0.5, size = 14,
+                                  margin = margin(b = 8)),
+      plot.background = element_rect(fill = "white", colour = NA),
+      plot.margin  = margin(8, 12, 8, 12)  # ← colchón externo uniforme
+    )
+  )
+
+```
+### GRAFICA FINAL BIEN BETA DIVERSITY####################
+```{r}
+print(combined_plot)
+
+
+
+
+```
+### PLOT ALPHA AND BETA DIVERSITY TOGETHER
+```{r}
+
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(grid)
+library(patchwork)
+
+```
+### ========= PALETA Y TEMA =========
+```{r}
+pal <- c(Rural = "#E9B44C", Urban = "#4F86C6")
+
+base_theme <- theme_minimal(base_size = 11) +
+  theme(
+    panel.background  = element_rect(fill = "white", colour = NA),
+    panel.grid.major  = element_blank(),
+    panel.grid.minor  = element_blank(),
+    axis.line.x       = element_line(linewidth = 0.4, colour = "black"),
+    axis.line.y       = element_line(linewidth = 0.4, colour = "black"),
+    strip.placement   = "outside", strip.clip = "off",
+    strip.background  = element_rect(fill = "white", colour = NA),
+    strip.text.x      = element_text(size = 10, hjust = 0.5),
+    panel.spacing.x   = unit(12, "pt"),
+    panel.spacing.y   = unit(8,  "pt"),
+    legend.position   = "right",
+    plot.margin       = margin(10, 16, 10, 12)
+  )
+
+```
+### ========= FUNCION PANEL ALFA (reutilizable) =========
+```{r}
+alpha_panel <- function(alpha_long_df, titulo = NULL) {
+```
+### etiquetas más cortas y con salto de línea donde ayuda
+```{r}
+  alpha_long_df <- alpha_long_df %>%
+    mutate(metric = factor(metric,
+                           levels = c("Observed","Shannon","Simpson","Pielou","Berger–Parker"),
+                           labels = c("Observed","Shannon","Simpson","Pielou","Berger–\nParker")
+    ))
+  
+```
+### p-val y estrellas
+```{r}
+  wilcox_df <- alpha_long_df %>%
+    group_by(metric) %>%
+    summarise(
+      p    = tryCatch(wilcox.test(value ~ Group)$p.value, error = function(e) NA_real_),
+      ymax = max(value, na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    mutate(
+      star = case_when(
+        is.na(p)      ~ "",
+        p < 0.001     ~ "***",
+        p < 0.01      ~ "**",
+        p < 0.05      ~ "*",
+        TRUE          ~ ""
+      ),
+      x = 1.5, y = ymax * 1.04
+    )
+  
+  ggplot(alpha_long_df, aes(Group, value, fill = Group, color = Group)) +
+    geom_boxplot(width = 0.6, alpha = 0.9, outlier.shape = NA, color = NA) +
+    geom_jitter(width = 0.12, size = 0.7, alpha = 0.55, show.legend = FALSE) +
+    facet_wrap(~ metric, nrow = 1, scales = "free_y") +
+    scale_fill_manual(values = pal, guide = "none") +
+    scale_color_manual(values = pal, guide = "none") +
+    scale_y_continuous(expand = expansion(mult = c(0.04, 0.12))) +
+    labs(x = NULL, y = NULL, title = titulo) +
+    base_theme +
+    coord_cartesian(clip = "off") +
+    geom_text(data = wilcox_df, aes(x = x, y = y, label = star),
+              inherit.aes = FALSE, size = 4) +
+    theme(
+      axis.text.x  = element_blank(),
+      axis.ticks.x = element_blank()
+    )
+}
+
+```
+### ========= TUS DOS PANELES DE ALFA =========
+```{r}
+p1 <- alpha_panel(alpha_euk_genus %>%
+                    pivot_longer(c(observed_taxa, H, simpson, pielou, berger_parker),
+                                 names_to = "metric", values_to = "value") %>%
+                    mutate(metric = recode(metric,
+                                           observed_taxa = "Observed", H = "Shannon",
+                                           simpson = "Simpson", pielou = "Pielou",
+                                           berger_parker = "Berger–Parker")),
+                  "") +
+  theme(legend.position = "none")
+
+p2 <- alpha_panel(alpha_bact_genus %>%
+                    pivot_longer(c(observed_taxa, H, simpson, pielou, berger_parker),
+                                 names_to = "metric", values_to = "value") %>%
+                    mutate(metric = recode(metric,
+                                           observed_taxa = "Observed", H = "Shannon",
+                                           simpson = "Simpson", pielou = "Pielou",
+                                           berger_parker = "Berger–Parker")),
+                  "")
+
+```
+### ========= PCA (sin grid, más aire) =========
+```{r}
+p_pca <- ggplot(pca_df, aes(x = PC1, y = PC2, color = Group)) +
+  geom_point(alpha = 0.7, size = 2) +
+  labs(x = "PC1", y = "PC2", title = "") +
+  scale_color_manual(values = c(Rural = "#E69F00", Urban = "#0072B2")) +
+  theme_minimal(base_size = 11) +
+  theme(
+    legend.position = "right",
+    legend.title = element_text(face = "plain"),
+    axis.title = element_text(size = 10),
+    axis.text = element_text(size = 9),
+    plot.title = element_text(hjust = 0, face = "bold"),
+```
+###  Esto agrega el borde completo que cierra el recuadro:
+```{r}
+    panel.border = element_rect(colour = "black", fill = NA, linewidth = 0.6)
+  )
+
+p3 <- p_pca +
+  scale_color_manual(values = pal, name = "Group") +
+  theme_minimal(base_size = 11) +
+  theme(
+    panel.grid = element_blank(),
+    axis.line.x.bottom = element_line(),
+    axis.line.y.left   = element_line(),
+    legend.position = "none",
+    plot.margin = margin(6, 10, 6, 8)
+  ) +
+  scale_x_continuous(expand = expansion(mult = c(0.02, 0.02))) +
+  scale_y_continuous(expand = expansion(mult = c(0.02, 0.02)))
+
+p3 <- p_pca +
+  scale_color_manual(values = pal, name = "Group") +
+  theme_minimal(base_size = 11) +
+  theme(
+    panel.grid = element_blank(),
+    axis.line.x.bottom = element_line(),
+    axis.line.y.left   = element_line(),
+    legend.position = "none",
+    plot.margin = margin(8, 14, 8, 14)  # más aire en todos los lados
+  ) +
+```
+### más espacio a los bordes
+```{r}
+  scale_x_continuous(expand = expansion(mult = c(0.08, 0.08))) +
+  scale_y_continuous(expand = expansion(mult = c(0.08, 0.08)))
+```
+### =========  FINAL Composition  =========
+```{r}
+final_plot <- (p1 / p2 / p3) +
+  plot_layout(heights = c(1, 1, 1.3), guides = "collect") +
+  plot_annotation(tag_levels = "A") &
+  theme(
+    legend.position = "right",
+    legend.title    = element_text(face = "plain"),
+    plot.tag        = element_text(size = 14, face = "plain"),
+    panel.spacing   = unit(10, "pt")
+  )
+
+final_plot
 ```
