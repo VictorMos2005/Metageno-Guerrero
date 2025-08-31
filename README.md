@@ -24,6 +24,7 @@ Figures
 - [PCoA in the anthropometric-demographic space and its association with BMI percentile, age group, and lifestyle](#pcoa)
 
 - [Alpha and beta diversity of Rural and Urban metagenomes.](#alpha-and-beta-diversity-of-rural-and-urban-metagenomes)
+- [Differentially abundant bacterial and eukaryotic taxa between Rural and Urban groups](#differentially-abundant-bacterial-and-eukaryotic-taxa-between-rural-and-urban-groups)
 
 ---
 
@@ -1585,7 +1586,7 @@ combined_plot <-
   )
 
 ```
-### FINAL WELL-FORMATTED BETA DIVERSITY GRAPH####################
+### FINAL WELL-FORMATTED BETA DIVERSITY GRAPH
 ```{r}
 print(combined_plot)
 
@@ -1756,4 +1757,389 @@ final_plot <- (p1 / p2 / p3) +
   )
 
 final_plot
+```
+
+### Differentially abundant bacterial and eukaryotic taxa between Rural and Urban groups
+
+#### Requiered libraries: dplyr, tidyr, stringr, ggplot2, purrr, broom
+```{r}
+
+rm(list = ls(envir = .GlobalEnv), envir = .GlobalEnv); invisible(gc())
+
+suppressPackageStartupMessages({
+  library(dplyr); library(tidyr); library(ggplot2); library(scales)
+})
+
+
+```
+### --- 1. DATA LOADING AND CLEANING ---
+```{r}
+kaiju_merged <- read.csv(
+  file = "/home/alumno21/axel/files/kaiju_merged_final.csv",
+  header = TRUE,
+  sep = ",",
+  fileEncoding = "latin1",
+  stringsAsFactors = FALSE,
+  na.strings = c("", "NA")
+)
+
+```
+### --- Urban and Rural lists adapted with suffix "_kaiju.out" ---
+```{r}
+urban_files_kaiju <- paste0(c("37082_2 # 1", "37082_1#20", "37082_1#27", "37035_2#13", "37035_1#29",
+                              "37082_2 # 14", "37035_2#12", "37035_2#6", "37082_1#17", "37035_2#14",
+                              "37082_1 # 26", "37035_1#30", "37035_1#32", "37082_1#15", "37082_2#15",
+                              "37082_1 # 13", "37035_2#10", "37082_1#31", "37035_2#17", "37035_2#8",
+                              "37035_2 # 23", "37035_2#31", "37035_2#24", "37082_2#5", "36703_3#5",
+                              "37082_1 # 10", "36703_3#7", "37082_2#9", "37082_2#3", "37035_2#2",
+                              "37035_2 # 3", "37035_2#19", "37035_2#21", "36703_3#1", "37082_1#24",
+                              "36703_3 # 2", "37035_2#4", "37035_2#15", "37035_2#18", "37035_2#28",
+                              "37082_2 # 13", "37082_1#22", "37082_1#29", "37082_1#19", "37035_2#30",
+                              "37082_1 # 16", "37035_1#31", "37035_2#7", "37082_1#30", "37035_2#16",
+                              "37082_2 # 11", "37082_1#14", "37035_2#5", "37082_2#4", "37082_1#18",
+                              "37035_2 # 1", "37082_1#23", "37082_2#12", "37082_1#11", "37082_1#12",
+                              "37035_2 # 11", "37035_2#25", "37082_1#32", "37082_1#9", "37035_2#29",
+                              "37082_1 # 21", "37082_2#2", "37035_2#27", "36703_3#3", "37082_2#6",
+                              "37035_2 # 20", "37082_2#7", "37082_2#8", "37082_2#10", "37082_1#28",
+                              "36703_3 # 10", "37035_2#9", "37082_1#25", "36703_3#8", "36703_3#9",
+                              "37035_2 # 26", "36703_3#6", "37035_2#32", "36703_3#4", "37035_2#22"),
+                            "_kaiju.out")
+
+rural_files_kaiju <- paste0(c("37082_3 # 17", "37082_3#15", "37035_1#22", "36703_3#31", "37082_2#24",
+                              "36703_3 # 26", "37035_7#10", "36703_3#21", "37082_2#22", "37035_7#2",
+                              "37082_3 # 7", "37035_7#6", "37035_1#7", "37035_7#9", "37082_2#30",
+                              "37035_1 # 18", "37035_7#4", "37082_3#13", "37082_3#32", "37035_1#8",
+                              "37035_7 # 7", "37035_1#19", "37082_3#29", "37035_7#13", "37035_7#12",
+                              "37082_2 # 16", "36703_3#25", "37082_3#27", "37082_3#5", "37082_3#21",
+                              "37082_2 # 19", "37082_3#16", "37035_1#5", "37082_3#1", "37035_7#11",
+                              "37035_7 # 5", "36703_3#13", "37035_7#14", "37035_1#1", "37082_3#11",
+                              "37035_1 # 10", "37035_1#12", "37082_3#4", "36703_3#17", "36703_3#27",
+                              "37082_3 # 19", "37082_2#18", "36703_3#29", "36703_3#12", "36703_3#32",
+                              "37035_1 # 15", "37035_1#27", "37035_1#13", "37035_7#8", "37035_1#6",
+                              "37082_3 # 24", "36703_3#30", "37035_7#1", "37035_1#16", "37035_7#15",
+                              "37082_3 # 26", "37035_1#23", "37035_1#2", "37082_2#27", "37035_7#3",
+                              "37082_2 # 20", "36703_3#16", "37082_3#8", "37035_1#25", "36703_3#14",
+                              "37082_3 # 3", "37035_1#4", "37082_2#29", "37082_3#30", "37082_2#31",
+                              "37035_7 # 22", "37035_7#16", "37082_2#17", "36703_3#18", "37035_1#11",
+                              "37035_1 # 3", "37035_1#14", "37082_3#9", "36703_3#23", "37082_2#28",
+                              "37082_2 # 21", "37082_3#31", "36703_3#20", "37082_2#25", "36703_3#19",
+                              "37082_2 # 26", "37082_3#6", "37035_1#17", "37082_2#23", "36703_3#15",
+                              "36703_3 # 28", "37082_3#12", "37082_2#32", "37082_3#10", "36703_3#22",
+                              "37082_3 # 28", "36703_3#24", "37082_3#18", "37082_3#20", "37035_1#24",
+                              "37082_3 # 23", "37082_3#2", "37035_1#20", "37082_3#22", "37082_3#25",
+                              "37082_3 # 14", "37035_1#9", "36703_3#11", "37035_1#21", "37035_7#20",
+                              "37035_7 # 17", "37035_7#21", "37035_7#19", "37035_1#26", "37035_7#24",
+                              "37035_7 # 18", "37035_7#23", "37035_7#25"),
+                            "_kaiju.out")
+
+```
+### --- Correctly assign file_base and Group ---
+```{r}
+kaiju_merged <- kaiju_merged %>%
+  mutate(
+    file_base = paste0(gsub("\\.out$", "", basename(file)), "_kaiju.out"),
+    Group = case_when(
+      file_base %in% urban_files_kaiju ~ "Urban",
+      file_base %in% rural_files_kaiju ~ "Rural",
+      TRUE ~ NA_character_
+    )
+  ) %>%
+  filter(!is.na(Group))
+
+suppressPackageStartupMessages({
+  library(dplyr); library(tidyr); library(stringr)
+  library(ggplot2); library(purrr); library(broom)
+})
+
+```
+### ---------- Parameter: genera of interest ----------
+```{r}
+target_genera <- c("Clostridium", "Blautia", "Ruminococcus", "Prevotella", "Streptococcus")
+
+```
+### ---------- Utilities ----------
+```{r}
+p_to_stars <- function(p){
+  dplyr::case_when(
+    is.na(p)   ~ "",
+    p < 0.0001 ~ "****",
+    p < 0.001  ~ "***",
+    p < 0.01   ~ "**",
+    p < 0.05   ~ "*",
+    TRUE       ~ ""
+  )
+}
+
+```
+### Etiquetas n por grupo
+```{r}
+n_by_group <- kaiju_merged %>%
+  distinct(file_base, Group) %>%
+  count(Group) %>%
+  mutate(label = paste0(Group, " (n=", n, ")"))
+lab_urban <- n_by_group %>% filter(Group=="Urban") %>% pull(label)
+lab_rural <- n_by_group %>% filter(Group=="Rural") %>% pull(label)
+
+```
+### ---------- Per-sample summary: reads per Genus (only Bacteria, only selected) ----------
+```{r}
+per_sample_genus <- kaiju_merged %>%
+  filter(Domain == "Bacteria",
+         !is.na(Genus), Genus != "", Genus != "Unclassified",
+         Genus %in% target_genera) %>%
+  group_by(file_base, Group, Genus) %>%
+  summarise(reads = sum(reads, na.rm = TRUE), .groups = "drop") %>%
+```
+### aseguramos presencia de todos los géneros seleccionados en todas las muestras (0 si ausente)
+```{r}
+  complete(file_base, Group, Genus = target_genera, fill = list(reads = 0))
+
+```
+### Mantener orden de los géneros como en target_genera
+```{r}
+per_sample_genus$Genus <- factor(per_sample_genus$Genus, levels = target_genera)
+
+```
+### ---------- Prevalence and average reads per Group (only selected) ----------
+### Prevalencia: % de muestras del grupo con reads > 0 para ese género
+```{r}
+preval_mean <- per_sample_genus %>%
+  group_by(Group) %>%
+  mutate(n_group = n_distinct(file_base)) %>%
+  group_by(Group, Genus, n_group) %>%
+  summarise(
+    prevalence = 100 * mean(reads > 0, na.rm = TRUE),
+    mean_reads = mean(reads, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  arrange(Group, match(Genus, target_genera))
+
+```
+### (Optional) print summary table
+```{r}
+cat("\n=== Géneros seleccionados — prevalencia y media de lecturas ===\n")
+print(preval_mean %>% mutate(prevalence = round(prevalence,1),
+mean_reads = round(mean_reads,1)))
+
+```
+### --- Data for the plot ---
+```{r}
+plot_df_all <- per_sample_genus %>%
+  mutate(log_reads = log10(reads + 1),
+         Group_lab = ifelse(Group=="Urban", lab_urban, lab_rural))
+
+```
+### Para el boxplot: excluir ceros (presencia solamente)
+```{r}
+plot_df_nz <- plot_df_all %>% filter(reads > 0)
+
+```
+### --- Wilcoxon per genus (you can keep all points, including zeros) ---
+```{r}
+wilcox_tbl <- plot_df_all %>%
+  group_by(Genus) %>%
+  summarise(
+    p_value = tryCatch(
+      wilcox.test(log_reads ~ Group, exact = FALSE)$p.value,
+      error = function(e) NA_real_
+    ),
+    .groups = "drop"
+  ) %>%
+  mutate(stars = p_to_stars(p_value)) %>%
+```
+### posición del texto: usa el máximo de los NO-CERO por género
+```{r}
+  left_join(plot_df_nz %>% group_by(Genus) %>%
+              summarise(y_pos = max(log_reads, na.rm = TRUE) + 0.15, .groups="drop"),
+            by = "Genus")
+
+```
+### --- Theme (same) ---
+```{r}
+base_theme <- theme_minimal(base_size = 11) +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line.x.bottom = element_line(),
+    axis.line.y.left  = element_line(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks = element_blank(),
+    strip.text = element_text(hjust = 0.5, size = 8),
+    plot.title = element_text(hjust = 0.5, size = 14, face = "plain"),
+    plot.margin = margin(10, 10, 10, 10),
+    panel.spacing = unit(6, "pt") # un pelín menos de espacio entre facet
+  )
+
+```
+### --- Plot: boxplot with NON-ZEROS + jitter with ALL ---
+```{r}
+plot_boxbactpred <- ggplot() +
+  geom_boxplot(
+    data = plot_df_nz,
+    aes(x = Group_lab, y = log_reads, fill = Group),
+    width = 0.65, alpha = 0.9, outlier.shape = NA
+  ) +
+  geom_jitter(
+    data = plot_df_nz, # <- sin ceros
+    aes(x = Group_lab, y = log_reads),
+    width = 0.15, size = 0.3, alpha = 0.5,
+    inherit.aes = FALSE
+  ) +
+  facet_wrap(~ Genus, nrow = 1, scales = "free_y") +
+  labs(
+    title = "",
+    x = "Group", y = "Reads (log10)"
+  ) +
+  scale_fill_manual(values = c("Urban" = " # 5DA5DA", "Rural" = "#F4A460")) +
+  scale_y_continuous(expand = expansion(mult = c(0.02, 0.07))) +
+  base_theme +
+  geom_text(
+    data = wilcox_tbl,
+    aes(x = 1.5, y = y_pos, label = stars),
+    inherit.aes = FALSE, size = 8
+  )
+
+print(plot_boxbactpred)
+
+
+
+
+```
+### EUKARYOTA
+```{r}
+
+```
+### ---------- Parameters ----------
+```{r}
+target_taxa <- c("Agaricales", "Chorda", "Eimeriidae", "Halteriidae", "Saccharomycetales")
+
+p_to_stars <- function(p){
+  dplyr::case_when(
+    is.na(p)   ~ "",
+    p < 1e-4   ~ "****",
+    p < 1e-3   ~ "***",
+    p < 1e-2   ~ "**",
+    p < 5e-2   ~ "*",
+    TRUE       ~ ""
+  )
+}
+
+```
+### ---------- n labels per group ----------
+```{r}
+n_by_group <- kaiju_merged %>% distinct(file_base, Group) %>%
+  count(Group) %>%
+  mutate(label = paste0(Group, " (n=", n, ")"))
+lab_urban <- n_by_group %>% filter(Group=="Urban") %>% pull(label)
+lab_rural <- n_by_group %>% filter(Group=="Rural") %>% pull(label)
+
+```
+### ---------- Per-sample summary (EXCLUDING CHORDATA) ONLY target_taxa ----------
+```{r}
+per_sample_genus <- kaiju_merged %>%
+  filter(
+    Domain == "Eukaryota",
+    is.na(Phylum) | !grepl("^Chordata$", Phylum, ignore.case = TRUE),
+    !is.na(Genus), Genus != "", Genus != "Unclassified",
+    Genus %in% target_taxa
+  ) %>%
+  group_by(file_base, Group, Genus) %>%
+  summarise(reads = sum(reads, na.rm = TRUE), .groups = "drop") %>%
+```
+### asegurar presencia de todos los taxones en todas las muestras
+```{r}
+  complete(file_base, Group, Genus = target_taxa, fill = list(reads = 0))
+
+```
+### orden de facetas según target_taxa
+```{r}
+per_sample_genus$Genus <- factor(per_sample_genus$Genus, levels = target_taxa)
+
+```
+### ---------- Data for plot ----------
+```{r}
+plot_df_all <- per_sample_genus %>%
+  mutate(
+    log_reads = log10(reads + 1),
+    Group_lab = ifelse(Group=="Urban", lab_urban, lab_rural)
+  )
+
+```
+### para el jitter (sin ceros, así no se hace “banda”)
+```{r}
+plot_df_nz <- plot_df_all %>% filter(reads > 0)
+
+```
+### ---------- Wilcoxon per genus ----------
+```{r}
+wilcox_tbl <- plot_df_all %>%
+  group_by(Genus) %>%
+  summarise(
+    p_value = tryCatch(
+      wilcox.test(log_reads ~ Group, exact = FALSE)$p.value,
+      error = function(e) NA_real_
+    ),
+    y_pos = max(plot_df_nz$log_reads[plot_df_nz$Genus==first(Genus)], na.rm = TRUE) + 0.15,
+    .groups = "drop"
+  ) %>%
+  mutate(stars = p_to_stars(p_value))
+
+```
+### ---------- Theme ----------
+```{r}
+base_theme <- theme_minimal(base_size = 11) +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line.x.bottom = element_line(),
+    axis.line.y.left  = element_line(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks = element_blank(),
+    strip.text.x = element_text(hjust = 0.5, size = 9),
+    plot.title = element_text(hjust = 0.5, size = 14, face = "plain"),
+    plot.margin = margin(10, 10, 10, 10)
+  )
+
+```
+### ---------- Plot ----------
+```{r}
+p_euk_sel <- ggplot() +
+  geom_boxplot(
+    data = plot_df_nz,
+    aes(x = Group_lab, y = log_reads, fill = Group),
+    width = 0.65, alpha = 0.9, outlier.shape = NA
+  ) +
+  geom_jitter(
+    data = plot_df_nz, # sin ceros
+    aes(x = Group_lab, y = log_reads),
+    width = 0.15, size = 0.3, alpha = 0.5, inherit.aes = FALSE
+  ) +
+  facet_wrap(~ Genus, nrow = 1, scales = "free_y") +
+  labs(
+    title = "",
+    x = "Group", y = "Reads (log10)"
+  ) +
+  scale_fill_manual(values = c("Urban" = " # 5DA5DA", "Rural" = "#F4A460")) +
+  scale_y_continuous(expand = expansion(mult = c(0.02, 0.07))) +
+  base_theme +
+  geom_text(
+    data = wilcox_tbl,
+    aes(x = 1.5, y = y_pos, label = stars),
+    inherit.aes = FALSE, size = 8
+  )
+
+print(p_euk_sel)
+
+
+library(patchwork)
+
+final_fig5 <- plot_boxbactpred / (p_euk_sel+ theme(legend.position = "none")) +
+  plot_annotation(tag_levels = "A") &
+  theme(
+    plot.tag = element_text(size = 14, face = "plain") # estilo de las letras
+  )
+
+final_fig5
 ```
