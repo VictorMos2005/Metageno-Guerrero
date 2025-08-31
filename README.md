@@ -58,7 +58,7 @@ Finally we are going to create graphics using Rstudio to be able to visualize th
 
 # Figures
 
-## Figure-1
+## Figure 1
 
 ###  REQUIRED LIBRARIES 
 ```{r}
