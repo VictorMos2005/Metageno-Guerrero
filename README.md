@@ -22,7 +22,7 @@ This repository contains the automatized pipeline used in the article [...] for 
 
 Figures
   - [FIGURE 1. PCoA in the anthropometric–demographic space and its association with BMI percentile, age group, and lifestyle](#Figure-1)
-  - [Fig 3/5 (?)](#Fig-3/5-(?))
+  - [Fig 3/5 (?)](#Fig3/5(?))
 
 ---
 
