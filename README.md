@@ -20,8 +20,8 @@ This repository contains the automatized pipeline used in the article [...] for 
   - [Diveristy](#diversity)
   - [Taxonomic Analysis](#taxonomic-analysis)
 
-[Figures](#Figures) 
-  - [FIGURE 1. PCoA in the anthropometric–demographic space and its association with BMI percentile, age group, and lifestyle](#FIGURE 1-PCoA in the anthropometric–demographic space and its association with BMI percentile, age group, and lifestyle) 
+[Figures]
+  - [FIGURE 1. PCoA in the anthropometric–demographic space and its association with BMI percentile, age group, and lifestyle](#Figure-1)
 
 ---
 
@@ -58,7 +58,7 @@ Finally we are going to create graphics using Rstudio to be able to visualize th
 
 # Figures
 
-## FIGURE 1-PCoA in the anthropometric–demographic space and its association with BMI percentile, age group, and lifestyle
+## Figure-1
 
 ###  REQUIRED LIBRARIES 
 ```{r}
