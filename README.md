@@ -2007,10 +2007,8 @@ print(plot_boxbactpred)
 
 ```
 ### EUKARYOTA
-```{r}
 
-```
-### ---------- Parameters ----------
+#### ---------- Parameters ----------
 ```{r}
 target_taxa <- c("Agaricales", "Chorda", "Eimeriidae", "Halteriidae", "Saccharomycetales")
 
