@@ -22,6 +22,7 @@ This repository contains the automatized pipeline used in the article [...] for 
 
 Figures
   - [FIGURE 1. PCoA in the anthropometric–demographic space and its association with BMI percentile, age group, and lifestyle](#Figure-1)
+  - [## Fig 3/5 (?)](#Fig-3/5-(?))
 
 ---
 
@@ -557,10 +558,6 @@ print(combined_plot)
 ## Fig 3/5 (?)
 
 ### Fig5. Alpha and beta diversity of Rural and Urban metagenomes.
-```{r}
- 
-```
-### Loading Kaiju Merged from 0
 ### --- Libraries ---
 ```{r}
 library(dplyr)
