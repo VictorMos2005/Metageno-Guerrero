@@ -1871,7 +1871,7 @@ p_to_stars <- function(p){
 }
 
 ```
-### Etiquetas n por grupo
+### n labels per group
 ```{r}
 n_by_group <- kaiju_merged %>%
   distinct(file_base, Group) %>%
@@ -1890,18 +1890,18 @@ per_sample_genus <- kaiju_merged %>%
   group_by(file_base, Group, Genus) %>%
   summarise(reads = sum(reads, na.rm = TRUE), .groups = "drop") %>%
 ```
-### aseguramos presencia de todos los géneros seleccionados en todas las muestras (0 si ausente)
+### Guarantee the presence of all selected genus (0 if absent)
 ```{r}
   complete(file_base, Group, Genus = target_genera, fill = list(reads = 0))
 
 ```
-### Mantener orden de los géneros como en target_genera
+### Maintain th order of the genus like in target_genera 
 ```{r}
 per_sample_genus$Genus <- factor(per_sample_genus$Genus, levels = target_genera)
 
 ```
 ### ---------- Prevalence and average reads per Group (only selected) ----------
-### Prevalencia: % de muestras del grupo con reads > 0 para ese género
+### Prevalence: % of samples of the group with reads > 0 for that genus
 ```{r}
 preval_mean <- per_sample_genus %>%
   group_by(Group) %>%
@@ -1929,7 +1929,7 @@ plot_df_all <- per_sample_genus %>%
          Group_lab = ifelse(Group=="Urban", lab_urban, lab_rural))
 
 ```
-### Para el boxplot: excluir ceros (presencia solamente)
+### For boxplot: exclude 0 (presence only)
 ```{r}
 plot_df_nz <- plot_df_all %>% filter(reads > 0)
 
@@ -1947,7 +1947,7 @@ wilcox_tbl <- plot_df_all %>%
   ) %>%
   mutate(stars = p_to_stars(p_value)) %>%
 ```
-### posición del texto: usa el máximo de los NO-CERO por género
+### Position fo the text: use the maximum of the NO-CERO per genus
 ```{r}
   left_join(plot_df_nz %>% group_by(Genus) %>%
               summarise(y_pos = max(log_reads, na.rm = TRUE) + 0.15, .groups="drop"),
@@ -2047,12 +2047,12 @@ per_sample_genus <- kaiju_merged %>%
   group_by(file_base, Group, Genus) %>%
   summarise(reads = sum(reads, na.rm = TRUE), .groups = "drop") %>%
 ```
-### asegurar presencia de todos los taxones en todas las muestras
+### Make sure of the presence of al the taxons of all the samples
 ```{r}
   complete(file_base, Group, Genus = target_taxa, fill = list(reads = 0))
 
 ```
-### orden de facetas según target_taxa
+### Order of facets according to target_taxa
 ```{r}
 per_sample_genus$Genus <- factor(per_sample_genus$Genus, levels = target_taxa)
 
@@ -2066,7 +2066,7 @@ plot_df_all <- per_sample_genus %>%
   )
 
 ```
-### para el jitter (sin ceros, así no se hace “banda”)
+### For the jitter (without 0 to avoid the formation of "bands")
 ```{r}
 plot_df_nz <- plot_df_all %>% filter(reads > 0)
 
