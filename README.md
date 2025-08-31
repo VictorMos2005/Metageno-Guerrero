@@ -554,10 +554,10 @@ combined_plot <- (plot1 | plot2)  / (plot3 |p_lifestyle) +
 
 print(combined_plot)
 ```
+## Fig 3/5
 
-## Fig 3/5 (?)
+##Fig5. Alpha and beta diversity of Rural and Urban metagenomes.
 
-### Fig5. Alpha and beta diversity of Rural and Urban metagenomes.
 ### --- Libraries ---
 ```{r}
 library(dplyr)
@@ -565,7 +565,7 @@ library(tidyr)
  library(ggplot2)
 
 ```
-### --- 0. Estandarizar nombres de columnas y archivos ---
+### --- 0. Standardize column and file names ---
 ```{r}
 cat("\n--- Renombrando columnas de Kraken2 ---\n")
 kraken2_aligned <- kraken2_data_full %>%
@@ -604,12 +604,12 @@ kraken2_aligned$reads <- as.numeric(kraken2_data_full$reads_clade)
  cat("  Kraken2: ", length(unique(kraken2_aligned$file)), "\n")
  
 ```
-### --- 1. Definir jerarquía taxonómica ---
+### --- 1. Define taxonomic hierarchy ---
 ```{r}
  tax_levels <- c("Species", "Genus", "Family", "Order", "Class", "Phylum", "Kingdom", "Supergroup", "Domain")
  
 ```
-### --- 2. Función para detectar el nivel taxonómico más específico ---
+### --- 2. Function to detect the most specific taxonomic level ---
 ```{r}
 get_deepest_tax <- function(row) {
   for (level in tax_levels) {
@@ -622,7 +622,7 @@ get_deepest_tax <- function(row) {
  }
  
 ```
-### --- 3. Aplicar función a ambos datasets ---
+### --- 3. Apply function to both datasets ---
 ```{r}
  cat("\nAplicando nivel taxonómico más específico...\n")
  kaiju_data$deepest_tax <- apply(kaiju_data[, tax_levels], 1, get_deepest_tax)
@@ -635,7 +635,7 @@ get_deepest_tax <- function(row) {
  cat("  Ejemplo Kraken2:   ", head(kraken2_aligned$deepest_tax, 1), "\n")
  
 ```
-### --- 4. Crear claves únicas: file + deepest_tax ---
+### --- 4. Create unique keys: file + deepest_tax ---
 ```{r}
  kaiju_keys <- paste(kaiju_data$file, kaiju_data$deepest_tax)
  kraken2_keys <- paste(kraken2_aligned$file, kraken2_aligned$deepest_tax)
@@ -645,7 +645,7 @@ get_deepest_tax <- function(row) {
  cat("  Kraken2:   ", length(unique(kraken2_keys)), "\n")
 
 ```
-### --- 5. Filtrar Kraken2: solo lo que NO está en Kaiju ---
+### --- 5. Filter Kraken2: only what is NOT in Kaiju ---
 ```{r}
  kraken2_filtered <- kraken2_aligned[!(kraken2_keys %in% kaiju_keys), ]
  
@@ -654,13 +654,13 @@ get_deepest_tax <- function(row) {
  cat("  Kraken2 filtrado: ", nrow(kraken2_filtered), "\n")
  
 ```
-### --- 6. Unir datos sin duplicados lógicos ---
+### --- 6. Merge data without logical duplicates ---
 ```{r}
  cat("\n--- Uniendo datasets (Kaiju + Kraken2 filtrado) ---\n")
  kaiju_merged <- bind_rows(kaiju_data, kraken2_filtered)
 
 ```
-### --- 7. Validaciones finales ---
+### --- 7. Final validations ---
 ```{r}
  cat("\nValidaciones finales:\n")
 cat("  Kaiju        - Total reads: ", sum(kaiju_data$reads, na.rm = TRUE), "\n")
@@ -672,14 +672,9 @@ cat("  Kaiju        - Nrows: ", nrow(kaiju_data), "\n")
  cat("  Fusionado    - Nrows: ", nrow(kaiju_merged), "\n")
  
 cat("  Archivos fusionados: ", length(unique(kaiju_merged$file)), "\n\n")
- 
- 
+  
 ```
-### library(dplyr)
-```{r}
- 
-```
-### --- Renombrar columnas Kraken2 ---
+### --- Rename Kraken2 columns ---
 ```{r}
  kraken2_aligned <- kraken2_data_full %>%
    rename(
@@ -695,18 +690,18 @@ cat("  Archivos fusionados: ", length(unique(kaiju_merged$file)), "\n\n")
    )
  
 ```
-### --- Usamos file_base de Kraken2 como referencia ---
+### --- Use file_base from Kraken2 as reference ---
 ```{r}
  kraken2_aligned$file <- kraken2_data_full$file_base
  
 ```
-### --- Extraer file_base desde Kaiju ---
+### --- Extract file_base from Kaiju ---
 ```{r}
  kaiju_data$file <- gsub("_kaiju\\.out$", "", basename(kaiju_data$file))
 kaiju_data$file <- gsub("\\.out$", "", kaiju_data$file)  # por si hay archivos erróneos
  
 ```
-### Validar si coinciden los códigos
+### Validate if codes match
 ```{r}
  cat("\n--- Comparación de archivos únicos ---\n")
  cat("Kaiju archivos únicos:   ", length(unique(kaiju_data$file)), "\n")
@@ -715,12 +710,12 @@ kaiju_data$file <- gsub("\\.out$", "", kaiju_data$file)  # por si hay archivos e
  cat("Diferencias:             ", length(setdiff(unique(kraken2_aligned$file), unique(kaiju_data$file))), "\n")
  
 ```
-### --- Establecer niveles taxonómicos ---
+### --- Establish taxonomic levels ---
 ```{r}
  tax_levels <- c("Species", "Genus", "Family", "Order", "Class", "Phylum", "Kingdom", "Supergroup", "Domain")
  
 ```
-### --- Detectar nivel más específico ---
+### --- Detect most specific level ---
 ```{r}
  get_deepest_tax <- function(row) {
    for (level in tax_levels) {
@@ -734,13 +729,13 @@ kaiju_data$file <- gsub("\\.out$", "", kaiju_data$file)  # por si hay archivos e
  kraken2_aligned$deepest_tax <- apply(kraken2_aligned[, tax_levels], 1, get_deepest_tax)
  
 ```
-### --- Claves únicas ---
+### --- Unique keys ---
 ```{r}
  kaiju_keys   <- paste(kaiju_data$file, kaiju_data$deepest_tax)
  kraken2_keys <- paste(kraken2_aligned$file, kraken2_aligned$deepest_tax)
  
 ```
-### --- Conversión de valores numéricos ---
+### --- Conversion of numeric values ---
 ```{r}
 kaiju_data$percent   <- as.numeric(kaiju_data$percent)
  kaiju_data$reads     <- as.numeric(kaiju_data$reads)
@@ -748,17 +743,17 @@ kaiju_data$percent   <- as.numeric(kaiju_data$percent)
 kraken2_aligned$percent <- as.numeric(kraken2_aligned$percent)
  
 ```
-### --- Filtrar duplicados ---
+### --- Filter duplicates ---
 ```{r}
 kraken2_filtered <- kraken2_aligned[!(kraken2_keys %in% kaiju_keys), ]
  
 ```
-### --- Unir ---
+### --- Merge ---
 ```{r}
  kaiju_merged <- bind_rows(kaiju_data, kraken2_filtered)
  
 ```
-### --- Asignar file_base y Group al objeto fusionado ---
+### --- Assign file_base and Group to merged object ---
 ```{r}
  kaiju_merged <- kaiju_merged %>%
   mutate(
@@ -771,19 +766,19 @@ kraken2_filtered <- kraken2_aligned[!(kraken2_keys %in% kaiju_keys), ]
    )
  
 ```
-### Asegurar que reads sea numérico
+### Ensure reads are numeric
 ```{r}
  kaiju_merged$reads <- as.numeric(kaiju_merged$reads)
  
 ```
-### Replace NA or empty values in Order and Genus with "Unclassified"
+### Replace NA or empty in Order and Genus with "Unclassified"
 ```{r}
 kaiju_merged$Order[is.na(kaiju_merged$Order) | kaiju_merged$Order == ""] <- "Unclassified"
  kaiju_merged$Genus[is.na(kaiju_merged$Genus) | kaiju_merged$Genus == ""] <- "Unclassified"
  
  
 ```
-### --- Listas Urban y Rural adaptadas con sufijo "_kaiju.out" ---
+### --- Urban and Rural lists adapted with suffix "_kaiju.out" ---
 ```{r}
  urban_files_kaiju <- paste0(c("37082_2#1", "37082_1#20", "37082_1#27", "37035_2#13", "37035_1#29",
                                "37082_2#14", "37035_2#12", "37035_2#6", "37082_1#17", "37035_2#14",
@@ -831,7 +826,7 @@ kaiju_merged$Order[is.na(kaiju_merged$Order) | kaiju_merged$Order == ""] <- "Unc
                              "_kaiju.out")
  
 ```
-### --- Asignar correctamente file_base y Group ---
+### --- Correctly assign file_base and Group ---
 ```{r}
  kaiju_merged <- kaiju_merged %>%
    mutate(
@@ -846,12 +841,12 @@ kaiju_merged$Order[is.na(kaiju_merged$Order) | kaiju_merged$Order == ""] <- "Unc
  
  
 ```
-### Guardar como CSV
+### Save as CSV
 ```{r}
 write.csv(kaiju_merged, "kaiju_merged_final.csv", row.names = FALSE)
  
 ```
-### Guardar como TXT (tabulado)
+### Save as TXT (tab-delimited)
 ```{r}
 write.table(kaiju_merged, "kaiju_merged_final.txt",
            sep = "\t", quote = FALSE, row.names = FALSE)
@@ -866,20 +861,14 @@ write.table(kaiju_merged, "kaiju_merged_final.txt",
 
 ```
 ### GENERAL ALPHA DIVERSITY
-###
-```{r}
 
-
-
-
-```
-### Ensure independence
+#### Ensure independence
 ```{r}
 
 rm(list = ls(envir = .GlobalEnv), envir = .GlobalEnv); invisible(gc())
 
 ```
-### --- 1. CARGA Y LIMPIEZA DE DATOS ---
+#### --- 1. DATA LOADING AND CLEANING ---
 ```{r}
 kaiju_merged <- read.csv(
   file = "/home/alumno21/axel/files/kaiju_merged_final.csv",
@@ -891,7 +880,7 @@ kaiju_merged <- read.csv(
 )
 
 ```
-### --- Listas Urban y Rural adaptadas con sufijo "_kaiju.out" ---
+#### --- Urban and Rural lists adapted with suffix "_kaiju.out" ---
 ```{r}
 urban_files_kaiju <- paste0(c("37082_2#1", "37082_1#20", "37082_1#27", "37035_2#13", "37035_1#29",
                               "37082_2#14", "37035_2#12", "37035_2#6", "37082_1#17", "37035_2#14",
@@ -940,7 +929,7 @@ rural_files_kaiju <- paste0(c("37082_3#17", "37082_3#15", "37035_1#22", "36703_3
                             "_kaiju.out")
 
 ```
-### --- Asignar correctamente file_base y Group ---
+#### --- Correctly assign file_base and Group ---
 ```{r}
 kaiju_merged <- kaiju_merged %>%
   mutate(
@@ -954,15 +943,15 @@ kaiju_merged <- kaiju_merged %>%
   filter(!is.na(Group))
 
 ```
-### ---------- 0) Clave taxonómica más fina disponible ----------
-### (se mantiene por compatibilidad, pero no se usa porque trabajaremos a nivel Genus)
+#### ---------- 0) Finest available taxonomic key ----------
+#### (kept for compatibility, but not used because we work at Genus level)
 ```{r}
 tax_key <- if ("taxon_id" %in% names(kaiju_merged)) "taxon_id" else "Organism"
 
 ```
-### ---------- 1) Abundancias por muestra a nivel GENUS ----------
-### - NO filtramos Domain/Kingdom.
-### - Consolidamos por muestra + Genus.
+#### ---------- 1) Abundances per sample at GENUS level ----------
+##### - We do NOT filter Domain/Kingdom.
+##### - Consolidated by sample + Genus.
 ```{r}
 alltaxa_by_sample <- kaiju_merged %>%
   mutate(
@@ -975,7 +964,7 @@ alltaxa_by_sample <- kaiju_merged %>%
   ungroup()
 
 ```
-### (Chequeo opcional)
+#### (Optional check)
 ```{r}
 message("Rango de reads totales por muestra (nivel Genus):")
 print(
@@ -988,7 +977,7 @@ print(
 )
 
 ```
-### ---------- 2) Métricas de alpha diversidad por muestra ----------
+#### ---------- 2) Alpha diversity metrics per sample ----------
 ```{r}
 alpha_per_sample <- alltaxa_by_sample %>%
   group_by(file_base, Group) %>%
@@ -1002,7 +991,7 @@ alpha_per_sample <- alltaxa_by_sample %>%
   )
 
 ```
-### ---------- 3) Formato largo para facetear ----------
+#### ---------- 3) Long format for faceting ----------
 ```{r}
 alpha_long <- alpha_per_sample %>%
   pivot_longer(
@@ -1019,7 +1008,7 @@ alpha_long <- alpha_per_sample %>%
   )
 
 ```
-### ---------- 4) Etiquetas n por grupo ----------
+#### ---------- 4) n labels per group ----------
 ```{r}
 n_labels <- alpha_long %>%
   group_by(metric, Group) %>%
@@ -1027,7 +1016,7 @@ n_labels <- alpha_long %>%
   mutate(label = paste0("n = ", n))
 
 ```
-### ---------- 5) Wilcoxon y estrellas ----------
+#### ---------- 5) Wilcoxon and stars ----------
 ```{r}
 p_stars <- function(p){
   if (is.na(p)) "" else if (p < 0.001) "***" else if (p < 0.01) "**"
@@ -1045,14 +1034,14 @@ wilcox_df <- alpha_long %>%
          x = 1.5, y = ymax * 1.02)
 
 ```
-### ---------- 6) Estilo y gráfico ----------
+#### ---------- 6) Style and plot ----------
 ```{r}
 pal <- c(Rural = "#E9B44C", Urban = "#4F86C6")
 
 library(grid)  # por unit()
 
 ```
-### --- Tema base limpio ---
+#### --- Clean base theme ---
 ```{r}
 base_theme <- theme_minimal(base_size = 11) +
   theme(
@@ -1061,14 +1050,14 @@ base_theme <- theme_minimal(base_size = 11) +
     panel.grid.minor = element_blank(),
     
 ```
-### Solo bordes inferior e izquierdo (líneas de ejes)
+#### Only bottom and left borders (axis lines)
 ```{r}
     panel.border = element_blank(),
     axis.line.x = element_line(linewidth = 0.4, colour = "black"),
     axis.line.y = element_line(linewidth = 0.4, colour = "black"),
     
 ```
-### Facetas
+#### Facets
 ```{r}
     strip.placement = "outside",
     strip.clip = "off",
@@ -1107,12 +1096,8 @@ p_alpha
 
 
 ```
-### BACTERIA ALPHA DIVERSITY
-```{r}
-
-
-```
-### -------- PALETA Y TEMA --------
+### ALPHA DIVERSITY OF BACTERIA
+#### -------- PALETTE AND THEME --------
 ```{r}
 pal <- c(Rural = "#E9B44C", Urban = "#4F86C6")
 
@@ -1140,7 +1125,7 @@ p_stars <- function(p){
 }
 
 ```
-### -------- 1) FILTRAR BACTERIA Y TRABAJAR A NIVEL GENUS --------
+#### -------- 1) FILTER BACTERIA AND WORK AT GENUS LEVEL --------
 ```{r}
 bact_genus <- kaiju_merged %>%
   filter(Domain == "Bacteria") %>%
@@ -1152,7 +1137,7 @@ bact_genus <- kaiju_merged %>%
   ungroup()
 
 ```
-### --- Chequeos opcionales ---
+#### --- Optional checks ---
 ```{r}
 message("Lecturas TOT por muestra (Bacteria, nivel Genus):")
 print(bact_genus %>%
@@ -1168,7 +1153,7 @@ print(bact_genus %>% group_by(Genus) %>%
         arrange(desc(reads)) %>% head(10))
 
 ```
-### -------- 2) MÉTRICAS ALPHA POR MUESTRA --------
+#### -------- 2) ALPHA METRICS PER SAMPLE --------
 ```{r}
 alpha_bact_genus <- bact_genus %>%
   group_by(file_base, Group) %>%
@@ -1194,7 +1179,7 @@ alpha_long <- alpha_bact_genus %>%
   )
 
 ```
-### -------- 3) WILCOXON Y ESTRELLAS --------
+#### -------- 3) WILCOXON AND STARS --------
 ```{r}
 wilcox_df <- alpha_long %>%
   group_by(metric) %>%
@@ -1207,7 +1192,7 @@ wilcox_df <- alpha_long %>%
          x = 1.5, y = ymax * 1.02)
 
 ```
-### -------- 4) GRÁFICO --------
+#### -------- 4) PLOT --------
 ```{r}
 p_alpha_bact_genus <- ggplot(alpha_long, aes(Group, value, fill = Group)) +
   geom_boxplot(width = 0.65, alpha = 0.85, outlier.shape = NA) +
@@ -1226,11 +1211,8 @@ p_alpha_bact_genus
 
 
 ```
-### EUKARYOTA ALPHA DIVERSITY
-```{r}
-
-```
-### -------- PALETA Y TEMA --------
+### ALPHA DIVERSITY OF EUKARYOTA
+#### -------- PALETTE AND THEME --------
 ```{r}
 pal <- c(Rural = "#E9B44C", Urban = "#4F86C6")
 
@@ -1258,7 +1240,7 @@ p_stars <- function(p){
 }
 
 ```
-### -------- 1) FILTRAR EUKARYOTA Y TRABAJAR A NIVEL GENUS --------
+#### -------- 1) FILTER EUKARYOTA AND WORK AT GENUS LEVEL --------
 ```{r}
 euk_genus <- kaiju_merged %>%
   filter(Domain == "Eukaryota") %>%
@@ -1270,7 +1252,7 @@ euk_genus <- kaiju_merged %>%
   ungroup()
 
 ```
-### --- Chequeos opcionales ---
+#### --- Optional checks ---
 ```{r}
 message("Lecturas TOT por muestra (Eukaryota, nivel Genus):")
 print(euk_genus %>%
@@ -1286,7 +1268,7 @@ print(euk_genus %>% group_by(Genus) %>%
         arrange(desc(reads)) %>% head(10))
 
 ```
-### -------- 2) MÉTRICAS ALPHA POR MUESTRA --------
+#### -------- 2) ALPHA METRICS PER SAMPLE --------
 ```{r}
 alpha_euk_genus <- euk_genus %>%
   group_by(file_base, Group) %>%
@@ -1312,7 +1294,7 @@ alpha_long <- alpha_euk_genus %>%
   )
 
 ```
-### -------- 3) WILCOXON Y ESTRELLAS --------
+#### -------- 3) WILCOXON AND STARS --------
 ```{r}
 wilcox_df <- alpha_long %>%
   group_by(metric) %>%
@@ -1325,7 +1307,7 @@ wilcox_df <- alpha_long %>%
          x = 1.5, y = ymax * 1.02)
 
 ```
-### -------- 4) GRÁFICO --------
+#### -------- 4) PLOT --------
 ```{r}
 p_alpha_euk_genus <- ggplot(alpha_long, aes(Group, value, fill = Group)) +
   geom_boxplot(width = 0.65, alpha = 0.85, outlier.shape = NA) +
@@ -1341,15 +1323,8 @@ p_alpha_euk_genus <- ggplot(alpha_long, aes(Group, value, fill = Group)) +
             inherit.aes = FALSE, size = 8)
 
 p_alpha_euk_genus
-
-
-
-
 ```
 ### BETA DIVERSITY
-```{r}
-
-```
 ### --- Libraries ---
 ```{r}
 library(dplyr)
@@ -1369,7 +1344,7 @@ kaiju_merged$reads <- as.numeric(kaiju_merged$reads)
 kaiju_merged$Order[is.na(kaiju_merged$Order) | kaiju_merged$Order == ""] <- "Unclassified"
 
 ```
-### --- Crear matriz de abundancia a nivel Order ---
+#### --- Create abundance matrix at Order level ---
 ```{r}
 abundance_matrix <- kaiju_merged %>%
   group_by(file_base, Order) %>%
@@ -1378,12 +1353,12 @@ abundance_matrix <- kaiju_merged %>%
   column_to_rownames("file_base")
 
 ```
-### --- Normalizar a abundancia relativa ---
+#### --- Normalize to relative abundance ---
 ```{r}
 abundance_matrix_rel <- abundance_matrix / rowSums(abundance_matrix)
 
 ```
-### --- Metadata para PERMANOVA y gráficos ---
+#### --- Metadata for PERMANOVA and plots ---
 ```{r}
 metadata_df <- data.frame(Sample = rownames(abundance_matrix_rel)) %>%
   mutate(Group = case_when(
@@ -1398,12 +1373,12 @@ abundance_matrix_rel <- abundance_matrix_rel[metadata_df$Sample, , drop = FALSE]
 
 
 ```
-### --- Calcular distancias Bray-Curtis ---
+#### --- Calculate Bray-Curtis distances ---
 ```{r}
 dist_bray <- vegdist(abundance_matrix_rel, method = "bray")
 
 ```
-### --- PERMANOVA ---
+#### --- PERMANOVA ---
 ```{r}
 permanova_res <- adonis2(dist_bray ~ Group, data = metadata_df)
 print(permanova_res)
@@ -1412,7 +1387,7 @@ r2_value <- round(permanova_res$R2[1], 3)
 p_value <- permanova_res$`Pr(>F)`[1]
 
 ```
-### --- NMDS ---
+#### --- NMDS ---
 ```{r}
 nmds_res <- metaMDS(dist_bray, k=2, trymax=100)
 nmds_df <- as.data.frame(nmds_res$points) %>%
@@ -1420,7 +1395,7 @@ nmds_df <- as.data.frame(nmds_res$points) %>%
   left_join(metadata_df, by = "Sample")
 
 ```
-### --- PCoA ---
+#### --- PCoA ---
 ```{r}
 pcoa_res <- cmdscale(dist_bray, k=2, eig=TRUE)
 pcoa_df <- as.data.frame(pcoa_res$points) %>%
@@ -1429,7 +1404,7 @@ pcoa_df <- as.data.frame(pcoa_res$points) %>%
   left_join(metadata_df, by = "Sample")
 
 ```
-### --- UMAP ---
+#### --- UMAP ---
 ```{r}
 umap_res <- umap(abundance_matrix_rel, n_neighbors=15, metric="euclidean")
 umap_df <- as.data.frame(umap_res) %>%
@@ -1438,7 +1413,7 @@ umap_df <- as.data.frame(umap_res) %>%
   left_join(metadata_df, by = "Sample")
 
 ```
-### --- PCA (sobre matriz de abundancia relativa) ---
+#### --- PCA (on relative abundance matrix) ---
 ```{r}
 pca_res <- prcomp(abundance_matrix_rel, scale. = TRUE)
 pca_df <- as.data.frame(pca_res$x[,1:2]) %>%
@@ -1446,7 +1421,7 @@ pca_df <- as.data.frame(pca_res$x[,1:2]) %>%
   left_join(metadata_df, by = "Sample")
 
 ```
-### --- Función base para ggplot ---
+#### --- Base function for ggplot ---
 ```{r}
 base_plot <- function(df, x, y, title) {
   ggplot(df, aes_string(x=x, y=y, color="Group")) +
@@ -1460,7 +1435,7 @@ base_plot <- function(df, x, y, title) {
 }
 
 ```
-### --- Crear plots sin leyenda ---
+#### --- Create plots without legend ---
 ```{r}
 p_nmds <- base_plot(nmds_df, "MDS1", "MDS2", "NMDS (Bray-Curtis)") + theme(legend.position = "none")
 p_pcoa <- base_plot(pcoa_df, "PCoA1", "PCoA2", "PCoA (Bray-Curtis)") + theme(legend.position = "none")
@@ -1468,7 +1443,7 @@ p_umap <- base_plot(umap_df, "UMAP1", "UMAP2", "UMAP") + theme(legend.position =
 p_pca  <- base_plot(pca_df, "PC1", "PC2", "PCA") + theme(legend.position = "none")
 
 ```
-### --- Extraer leyenda de p_pcoa para poner a la derecha ---
+#### --- Extract legend from p_pcoa to place on the right ---
 ```{r}
 get_legend <- function(a_gplot) {
   tmp <- ggplotGrob(a_gplot)
@@ -1482,7 +1457,7 @@ legend_plot <- base_plot(pcoa_df, "PCoA1", "PCoA2", "PCoA (Bray-Curtis)") + them
 legend_grob <- get_legend(legend_plot)
 
 ```
-### --- Crear texto estadístico ---
+#### --- Create statistical text ---
 ```{r}
 annot_nms <- paste(
   sprintf("PERMANOVA R² = %.3f", r2_value),
@@ -1520,7 +1495,7 @@ legend_table <- gtable_add_grob(legend_table, legend_grob, t = 1, l = 1)
 legend_table <- gtable_add_grob(legend_table, caption_grob, t = 3, l = 1)
 
 ```
-### 2x2 plots grid without legend
+#### 2x2 plots grid without legend
 ```{r}
 plots_grid <- (p_nmds + p_pcoa) / (p_umap + p_pca) +
   plot_layout(guides = "collect") &
@@ -1530,7 +1505,7 @@ plots_grid <- (p_nmds + p_pcoa) / (p_umap + p_pca) +
   )
 
 ```
-### Combine plots and legend + statistics closer, with adjusted widths
+#### Combine plots and legend + statistics closer, with adjusted widths
 ```{r}
 combined_plot <- wrap_elements(plots_grid) + wrap_elements(legend_table) +
   plot_layout(widths = c(8, 5))
@@ -1542,7 +1517,7 @@ library(patchwork)
 library(gridExtra)
 
 ```
-### 1) Márgenes cómodos por subplot (ni apretado ni holgado)
+#### 1) Comfortable margins per subplot (neither tight nor loose)
 ```{r}
 tema_solo_dos_lineas_comfy <- theme(
   panel.background   = element_rect(fill = "white", colour = NA),
@@ -1565,7 +1540,7 @@ p_umap <- p_umap + tema_solo_dos_lineas_comfy
 p_pca  <- p_pca  + tema_solo_dos_lineas_comfy
 
 ```
-### 2) Espaciado entre paneles del grid
+#### 2) Spacing between grid panels
 ```{r}
 plots_grid <- (p_nmds + p_pcoa) / (p_umap + p_pca) +
   plot_layout(guides = "collect") &
@@ -1577,7 +1552,7 @@ plots_grid <- (p_nmds + p_pcoa) / (p_umap + p_pca) +
   )
 
 ```
-### 3) Tags sin añadir bordes, pero con respiración mínima
+#### 3) Tags without borders, but with minimal spacing
 ```{r}
 plots_grid_tagged <- plots_grid +
   plot_annotation(tag_levels = "A") &
@@ -1588,7 +1563,7 @@ plots_grid_tagged <- plots_grid +
   )
 
 ```
-### 4) Columna derecha más angosta y con separación moderada
+#### 4) Right column narrower with moderate spacing
 ```{r}
 space_between_legend_and_text <- unit(15, "mm")  # ↓ antes 15 mm
 legend_table <- gtable(
@@ -1601,7 +1576,7 @@ legend_table <- gtable_add_grob(legend_table, legend_grob, t = 1, l = 1)
 legend_table <- gtable_add_grob(legend_table, caption_grob, t = 3, l = 1)
 
 ```
-### 5) Margen EXTERNO del conjunto (título no pegado ni chocado)
+#### 5) EXTERNAL margin of the set (title not stuck or clashing)
 ```{r}
 combined_plot <-
   wrap_elements(plots_grid_tagged) + wrap_elements(legend_table) +
@@ -1617,17 +1592,13 @@ combined_plot <-
   )
 
 ```
-### GRAFICA FINAL BIEN BETA DIVERSITY####################
+### FINAL WELL-FORMATTED BETA DIVERSITY GRAPH####################
 ```{r}
 print(combined_plot)
-
-
-
 
 ```
 ### PLOT ALPHA AND BETA DIVERSITY TOGETHER
 ```{r}
-
 
 library(dplyr)
 library(tidyr)
@@ -1636,7 +1607,7 @@ library(grid)
 library(patchwork)
 
 ```
-### ========= PALETA Y TEMA =========
+### ========= PALETTE AND THEME =========
 ```{r}
 pal <- c(Rural = "#E9B44C", Urban = "#4F86C6")
 
@@ -1657,11 +1628,11 @@ base_theme <- theme_minimal(base_size = 11) +
   )
 
 ```
-### ========= FUNCION PANEL ALFA (reutilizable) =========
+### ========= ALPHA PANEL FUNCTION (reusable) =========
 ```{r}
 alpha_panel <- function(alpha_long_df, titulo = NULL) {
 ```
-### etiquetas más cortas y con salto de línea donde ayuda
+### shorter labels and line breaks where helpful
 ```{r}
   alpha_long_df <- alpha_long_df %>%
     mutate(metric = factor(metric,
@@ -1670,7 +1641,7 @@ alpha_panel <- function(alpha_long_df, titulo = NULL) {
     ))
   
 ```
-### p-val y estrellas
+### p-value and stars
 ```{r}
   wilcox_df <- alpha_long_df %>%
     group_by(metric) %>%
@@ -1709,7 +1680,7 @@ alpha_panel <- function(alpha_long_df, titulo = NULL) {
 }
 
 ```
-### ========= TUS DOS PANELES DE ALFA =========
+### ========= YOUR TWO ALPHA PANELS =========
 ```{r}
 p1 <- alpha_panel(alpha_euk_genus %>%
                     pivot_longer(c(observed_taxa, H, simpson, pielou, berger_parker),
@@ -1731,7 +1702,7 @@ p2 <- alpha_panel(alpha_bact_genus %>%
                   "")
 
 ```
-### ========= PCA (sin grid, más aire) =========
+### ========= PCA (without grid, more space) =========
 ```{r}
 p_pca <- ggplot(pca_df, aes(x = PC1, y = PC2, color = Group)) +
   geom_point(alpha = 0.7, size = 2) +
@@ -1745,7 +1716,7 @@ p_pca <- ggplot(pca_df, aes(x = PC1, y = PC2, color = Group)) +
     axis.text = element_text(size = 9),
     plot.title = element_text(hjust = 0, face = "bold"),
 ```
-###  Esto agrega el borde completo que cierra el recuadro:
+### This adds the full border that closes the box:
 ```{r}
     panel.border = element_rect(colour = "black", fill = NA, linewidth = 0.6)
   )
@@ -1774,12 +1745,12 @@ p3 <- p_pca +
     plot.margin = margin(8, 14, 8, 14)  # más aire en todos los lados
   ) +
 ```
-### más espacio a los bordes
+### more space at the edges
 ```{r}
   scale_x_continuous(expand = expansion(mult = c(0.08, 0.08))) +
   scale_y_continuous(expand = expansion(mult = c(0.08, 0.08)))
 ```
-### =========  FINAL Composition  =========
+### ========= FINAL COMPOSITION (vertical, breathing) =========
 ```{r}
 final_plot <- (p1 / p2 / p3) +
   plot_layout(heights = c(1, 1, 1.3), guides = "collect") +
