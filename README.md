@@ -21,8 +21,8 @@ This repository contains the automatized pipeline used in the article [...] for 
   - [Taxonomic Analysis](#taxonomic-analysis)
 
 Figures
-  - [FIGURE 1. PCoA in the anthropometric–demographic space and its association with BMI percentile, age group, and lifestyle](#Figure-1)
-  - [Fig 3/5 (?)](#Fig3/5(?))
+  - [Fig. PCoA in the anthropometric–demographic space and its association with BMI percentile, age group, and lifestyle](#Fig.-PCoA-in-the-anthropometric-demographic-space-and-its-association-with-BMI-percentile,-age-group,-and-lifestyle)
+  - [Fig.Alpha and beta diversity of Rural and Urban metagenomes.](#Fig.Alpha-and-beta-diversity-of-Rural-and-Urban-metagenomes.)
 
 ---
 
@@ -59,7 +59,7 @@ Finally we are going to create graphics using Rstudio to be able to visualize th
 
 # Figures
 
-## Figure 1
+## Fig. PCoA in the anthropometric–demographic space and its association with BMI percentile, age group, and lifestyle
 
 ###  REQUIRED LIBRARIES 
 ```{r}
@@ -554,9 +554,7 @@ combined_plot <- (plot1 | plot2)  / (plot3 |p_lifestyle) +
 
 print(combined_plot)
 ```
-## Fig 3/5
-
-##Fig5. Alpha and beta diversity of Rural and Urban metagenomes.
+## Fig.  Alpha and beta diversity of Rural and Urban metagenomes.
 
 ### --- Libraries ---
 ```{r}
@@ -852,14 +850,7 @@ write.table(kaiju_merged, "kaiju_merged_final.txt",
            sep = "\t", quote = FALSE, row.names = FALSE)
  
 ```
-### Completion of Kaiju Merged from 0
-```{r}
- 
 
-
-
-
-```
 ### GENERAL ALPHA DIVERSITY
 
 #### Ensure independence
