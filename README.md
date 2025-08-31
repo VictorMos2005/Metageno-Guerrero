@@ -66,7 +66,7 @@ library(dplyr)
 library(ggcorrplot)
 library(patchwork)
 ```
-### --- 1. 1. DATA LOADING AND CLEANING ---
+### --- 1. DATA LOADING AND CLEANING ---
 ``` {r}
 data <- read.csv(
   file = "/home/alumno21/axel/files/data_207_3.csv",
@@ -88,7 +88,7 @@ data <- data[rowSums(is.na(data)) < ncol(data), ]
 data$BMI <- as.numeric(data$BMI)
 data$Age <- as.numeric(data$Age)
 ```
-### --- 2. 2. DERIVED VARIABLES ---
+### --- 2. DERIVED VARIABLES ---
 ```
 data <- data %>%
   mutate(
@@ -102,13 +102,13 @@ data <- data %>%
   )
 
 ```
-### --- 3. 3. FILTERING for analysis ---
+### --- 3. FILTERING for analysis ---
 
 ```
 data_complete <- data %>%
   filter(!is.na(BMI), !is.na(Age), !is.na(Percentil_group), !is.na(Age_group), !is.na(Lifestyle))
 ```
-### --- 4. 4. DISTANCE MATRIX AND PCoA ---
+### --- 4. DISTANCE MATRIX AND PCoA ---
 ```
 dist_matrix <- vegdist(data_complete[, c("BMI", "Age")], method = "bray")
 pcoa <- cmdscale(dist_matrix, k = 2, eig = TRUE)
@@ -129,7 +129,7 @@ percentil_counts <- data_complete %>%
 percentil_labels <- setNames(paste0(percentil_counts$Percentil_group, " (", percentil_counts$n, ")"), percentil_counts$Percentil_group)
 
 ```
-### --- 5. 5. PERMANOVA ---
+### --- 5. PERMANOVA ---
 ```
 set.seed(123)
 adonis_Percentil <- adonis2(dist_matrix ~ Percentil_group, data = data_complete)
@@ -141,7 +141,7 @@ print(adonis_Percentil)
 print(adonis_Age)
 print(adonis_Lifestyle)
 ```
-### --- 6. 6. UNIFIED THEME --
+### --- 6. UNIFIED THEME --
 ```
 custom_theme <- theme_minimal(base_size = 11) +
   theme(
@@ -156,7 +156,7 @@ custom_theme <- theme_minimal(base_size = 11) +
     panel.grid.minor = element_blank()
   )
 ```
-### --- 7. 7. 1 PLOTS ---
+### --- 7.1 PLOTS ---
 #### Labels with counts for Age_group
 ```
 age_counts <- data_complete %>%
@@ -171,7 +171,7 @@ lifestyle_counts <- data_complete %>%
 lifestyle_labels <- setNames(paste0(lifestyle_counts$Lifestyle, " (", lifestyle_counts$n, ")"), lifestyle_counts$Lifestyle)
 
 ```
-### --- 7. 7. 2 PLOTS ---
+### --- 7. 2 PLOTS ---
 ```
 p_percentil <- ggplot(scores_pcoa, aes(Dim1, Dim2, color = Percentil_group)) +
   geom_point(size = 1.8, alpha = 0.6) +
@@ -257,7 +257,7 @@ p_corr <- ggcorrplot(
   )
 
 ```
-### --- 9. 9. COMBINE PLOTS ---
+### --- 9. COMBINE PLOTS ---
 ```
 library(patchwork)
 ```
