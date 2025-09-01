@@ -36,6 +36,7 @@ Figures
    - [Part A](#part-a)
    - [Part B](#part-b)
    - [Part C](#part-c)
+- [Functional annotation of genes from selected taxa](#functional-annotation-of-genes-from-selected-taxa)
 
 ---
 
@@ -4665,5 +4666,495 @@ final_plotfunaon <- ( plot_funanondoms|plot_bacteriafunano|plot_eukfunanon
   )
 
 final_plotfunaon
+
+```
+
+
+## Functional annotation of genes from selected taxa
+#### In high-quality MAGs (>95% completeness). Stacked bar plots display the relative abundance of COG functional categories assigned to
+annotated genes from representative bacterial groups (Bacilli,Bacteroidota, Blautia, Clostridia, and Clostridiaceae) in Rural and Urban communities.
+
+### =========================
+### Libraries
+### =========================
+```{r}
+suppressPackageStartupMessages({
+  library(dplyr); library(tidyr); library(stringr); library(purrr)
+  library(ggplot2); library(forcats); library(taxize); library(readr)
+  library(scales)
+})
+
+```
+### =========================
+### User config (provide these)
+### =========================
+### Sys.setenv(ENTREZ_KEY = "YOUR_NCBI_KEY")   # already set in your session
+```{r}
+stopifnot(exists("rural_files"), exists("urban_files"))
+
+```
+### If anot is not yet loaded:
+### anot <- read.csv("/home/alumno21/axel/files/all_annotations_trimmed.csv",
+### sep = ",", stringsAsFactors = FALSE)
+```{r}
+
+```
+### =========================
+### Helpers
+### =========================
+```{r}
+assign_domain <- function(term) {
+  term_lower <- tolower(term)
+  if (grepl("virus|myoviridae|caudovirales|podoviridae|siphoviridae|ssdna|dsdna", term_lower)) "Viral"
+  else if (grepl("bacteria", term_lower)) "Bacteria"
+  else if (grepl("archaea", term_lower)) "Archaea"
+  else if (grepl("eukaryota", term_lower)) "Eukaryota"
+  else if (term_lower == "root") "Other" else "Other"
+}
+
+clean_pref_name <- function(x) {
+  ifelse(grepl("\\|", x), sub(".*\\|", "", x), x)
+}
+
+```
+### Robust, UID-based NCBI classification with cleaning and synonym fixes
+```{r}
+ncbi_classification_cached <- function(names_vec,
+                                       ranks_keep = c("species","genus","family","order","class","phylum","superkingdom"),
+                                       cache_path = "taxize_ncbi_cache_uid.rds") {
+  canonize <- function(x) {
+    x <- stringr::str_trim(x)
+    x <- sub("^unclassified\\s+", "", x, ignore.case = TRUE)
+    syn <- c(
+      "Bacteroidetes"   = "Bacteroidota",
+      "Planctomycetes"  = "Planctomycetota",
+      "Spirochaetes"    = "Spirochaetota",
+      "Fusobacteria"    = "Fusobacteriota",
+      "Aquificae"       = "Aquificota",
+      "Tenericutes"     = "Mycoplasmatota"
+    )
+    if (!is.na(x) && nzchar(x) && x %in% names(syn)) x <- syn[[x]]
+    x
+  }
+  
+  nm_clean <- unique(vapply(names_vec, canonize, character(1)))
+  nm_clean <- nm_clean[!is.na(nm_clean) & nm_clean != "" & nm_clean != "-"]
+  nm_clean <- nm_clean[grepl("[A-Za-z]", nm_clean)]
+  if (length(nm_clean) == 0) {
+    return(tibble::tibble(query_name = character(), lineage = character()))
+  }
+  
+  cache <- if (file.exists(cache_path)) readRDS(cache_path) else list()
+  to_query <- setdiff(nm_clean, names(cache))
+  
+  if (length(to_query) > 0) {
+    for (nm in to_query) {
+      uid <- suppressWarnings(taxize::get_uid(nm, ask = FALSE, messages = FALSE, rows = 1))
+      if (is.null(uid) || is.na(uid)) { cache[[nm]] <- NA_character_; next }
+      cl <- try(suppressWarnings(taxize::classification(uid, db = "ncbi")[[1]]), silent = TRUE)
+      if (inherits(cl, "try-error") || is.null(cl)) { cache[[nm]] <- NA_character_; next }
+      cl2 <- cl[cl$rank %in% ranks_keep, , drop = FALSE]
+      lineage <- if (nrow(cl2) > 0) paste(cl2$name, collapse = ";") else NA_character_
+      cache[[nm]] <- lineage
+```
+### Sys.sleep(0.34) # be nice to NCBI (optional)
+```{r}
+    }
+    saveRDS(cache, cache_path)
+  }
+  
+  tibble::tibble(
+    query_name = names(cache),
+    lineage    = unname(unlist(cache))
+  )
+}
+
+```
+### Infer COG letters from multiple columns and add COG_inferred + COG_primary
+```{r}
+infer_cog_from_columns <- function(df,
+                                   cols_to_scan = c("COG_category","EC","KEGG_ko","KEGG_Pathway",
+                                                    "Description","GOs","Preferred_name",
+                                                    "eggNOG_OGs","BRITE","PFAMs","CAZy",
+                                                    "BiGG_Reaction","KEGG_Module",
+                                                    "KEGG_Reaction","KEGG_rclass","KEGG_TC",
+                                                    "max_annot_lvl","max_annot_lvl_clean",
+                                                    "Preferred_name_clean"),
+                                   id_cols = c("File","MAG","query")) {
+  cols_to_scan <- intersect(cols_to_scan, names(df))
+  stopifnot(all(id_cols %in% names(df)))
+  if (length(cols_to_scan) == 0) stop("No candidate columns to scan were found in the data frame.")
+  
+  valid_cogs <- c("J","A","K","L","B","D","Y","V","T","M","N","Z","W","U","O",
+                  "C","G","E","F","H","I","P","Q","R","S")
+  
+  delim   <- "[\\s,;|/()\\[\\]{}:_-]"
+  pattern <- paste0("(?:(?<=^)|(?<=", delim, "))(", paste(valid_cogs, collapse="|"),
+                    ")(?=(?:$|", delim, "))")
+  
+  long_scan <- df %>%
+    mutate(across(all_of(cols_to_scan), ~as.character(.))) %>%
+    select(all_of(id_cols), everything()) %>%
+    pivot_longer(cols = all_of(cols_to_scan), names_to = "field", values_to = "value") %>%
+    filter(!is.na(value), value != "-") %>%
+    mutate(value_up = toupper(value))
+  
+  cogs_raw <- long_scan %>%
+    mutate(matches = stringr::str_extract_all(value_up, pattern)) %>%
+    select(all_of(id_cols), matches) %>%
+    tidyr::unnest(matches, keep_empty = FALSE) %>%
+    rename(cog = matches) %>%
+    filter(!is.na(cog))
+  
+  cogs_per_gene <- cogs_raw %>% distinct(across(all_of(id_cols)), cog)
+  
+  cog_mode <- cogs_raw %>%
+    group_by(across(all_of(id_cols)), cog) %>%
+    summarise(n = n(), .groups = "drop_last") %>%
+    arrange(desc(n), cog) %>%
+    slice_head(n = 1) %>%
+    ungroup() %>%
+    rename(COG_primary = cog)
+  
+  cog_set <- cogs_per_gene %>%
+    group_by(across(all_of(id_cols))) %>%
+    summarise(COG_inferred = paste(sort(unique(cog)), collapse = ","), .groups = "drop")
+  
+  df %>% left_join(cog_set, by = id_cols) %>% left_join(cog_mode, by = id_cols)
+}
+
+```
+### Match lineage with focus taxa (returns vector of matches per lineage)
+```{r}
+match_focus_taxa <- function(lineage_str, focus_taxa) {
+  if (is.na(lineage_str) || lineage_str == "") return(character(0))
+  hits <- focus_taxa[vapply(focus_taxa, function(tx) {
+    grepl(paste0("(^|;)", tx, "(;|$)"), lineage_str)
+  }, logical(1))]
+  hits
+}
+
+```
+### English labels for COG letters
+```{r}
+cog_labels <- c(
+  J="Translation, ribosome, biogenesis", A="RNA/nuclear processes (rare)",
+  K="Transcription", L="Replication, recombination & repair",
+  B="Chromatin structure (rare)", D="Cell cycle & division",
+  Y="Other uncommon", V="Intracellular trafficking & secretion",
+  T="Chaperones & folding", M="Cell wall/membrane/envelope",
+  N="Cell motility", Z="Cytoskeleton", W="Organelles",
+  U="Cofactors & vitamins", O="Post-translational modification",
+  C="Energy production & conversion", G="Carbohydrate metabolism",
+  E="Amino acid metabolism", F="Nucleotide metabolism",
+  H="Coenzyme metabolism", I="Lipid metabolism",
+  P="Inorganic ion transport & metabolism",
+  Q="Secondary metabolites biosynthesis",
+  R="General function prediction only", S="Function unknown"
+)
+
+```
+### =========================
+### 1) Prepare base table
+### =========================
+```{r}
+anot_prep <- anot %>%
+  filter(grepl("\\|", max_annot_lvl)) %>%
+  mutate(
+    max_annot_lvl_clean = sub(".*\\|", "", max_annot_lvl),
+    Domain_simplified   = vapply(max_annot_lvl_clean, assign_domain, character(1)),
+    Grupo = case_when(
+      File %in% rural_files ~ "Rural",
+      File %in% urban_files ~ "Urban",
+      TRUE ~ NA_character_
+    ),
+    Preferred_name_clean = clean_pref_name(Preferred_name)
+  ) %>%
+  filter(!is.na(Grupo), Preferred_name_clean != "")
+
+```
+### Add inferred COGs
+```{r}
+anot_prep <- infer_cog_from_columns(anot_prep)
+
+```
+### =========================
+### 2) NCBI lineages for all Preferred_name_clean (cached)
+### =========================
+```{r}
+all_names <- unique(anot_prep$Preferred_name_clean)
+lin_tbl <- ncbi_classification_cached(all_names)
+anot_prep <- anot_prep %>%
+  left_join(lin_tbl, by = c("Preferred_name_clean" = "query_name"))
+
+```
+### =========================
+### 3) Focus taxa (from your Figure 1 legends)
+### =========================
+```{r}
+focus_bacteria <- c("Clostridia","Clostridiaceae","Blautia","Bacteroidota","Bacilli")
+focus_euk      <- c("Ascomycota","Bilateria","Magnoliopsida","Opisthokonta","Streptophyta")
+
+```
+### Keep only focus taxa that actually appear in the lineages
+```{r}
+present_in_lineages <- function(focus, lineages) {
+  hits <- vapply(focus, function(tx) any(grepl(paste0("(^|;)", tx, "(;|$)"), lineages, useBytes = TRUE)), logical(1))
+  focus[hits]
+}
+present_bact <- present_in_lineages(focus_bacteria, na.omit(anot_prep$lineage))
+present_euk  <- present_in_lineages(focus_euk,      na.omit(anot_prep$lineage))
+
+```
+### =========================
+### 4) Expand to long by focus taxon
+### =========================
+```{r}
+expand_focus <- function(df, domain_filter, focus_taxa) {
+  df %>%
+    filter(Domain_simplified == domain_filter, !is.na(lineage)) %>%
+    mutate(focus_list = purrr::map(lineage, match_focus_taxa, focus_taxa = focus_taxa)) %>%
+    filter(lengths(focus_list) > 0) %>%
+    tidyr::unnest(focus_list) %>%
+    rename(Focus_taxon = focus_list)
+}
+bact_focus_long <- expand_focus(anot_prep, "Bacteria", present_bact)
+euk_focus_long  <- expand_focus(anot_prep, "Eukaryota", present_euk)
+
+```
+### =========================
+### 5) Relative abundance of COG by file (counts -> proportions -> group mean)
+### =========================
+```{r}
+summarize_cog_rel <- function(df, case_col = "Grupo") {
+  df %>%
+    filter(!is.na(COG_primary), COG_primary != "") %>%
+    group_by(File, .data[[case_col]], Focus_taxon, COG_primary) %>%
+    summarise(n_genes = n(), .groups = "drop_last") %>%
+    group_by(File, .data[[case_col]], Focus_taxon) %>%
+    mutate(prop = n_genes / sum(n_genes)) %>%
+    ungroup() %>%
+    group_by(.data[[case_col]], Focus_taxon, COG_primary) %>%
+    summarise(prop_mean = mean(prop, na.rm = TRUE), .groups = "drop")
+}
+bact_cog_rel <- summarize_cog_rel(bact_focus_long)
+euk_cog_rel  <- summarize_cog_rel(euk_focus_long)
+
+bact_cog_rel <- bact_cog_rel %>%
+  mutate(COG_lab = factor(paste0(COG_primary, " — ", cog_labels[COG_primary]),
+                          levels = paste0(names(cog_labels), " — ", cog_labels)))
+euk_cog_rel  <- euk_cog_rel %>%
+  mutate(COG_lab = factor(paste0(COG_primary, " — ", cog_labels[COG_primary]),
+                          levels = paste0(names(cog_labels), " — ", cog_labels)))
+
+```
+### =========================
+### 6) Plot functions
+### =========================
+```{r}
+plot_cog_stacks <- function(df_rel, title_txt = "") {
+  ggplot(df_rel, aes(x = .data[[ "Grupo" ]], y = prop_mean, fill = COG_lab)) +
+    geom_bar(stat = "identity", position = "fill", width = 0.8) +
+    scale_y_continuous(labels = percent_format(accuracy = 1)) +
+    labs(x = "Group", y = "Relative abundance (%)", fill = "COG category", title = title_txt) +
+    facet_wrap(~ Focus_taxon, ncol = 2, scales = "free_x") +
+    theme_classic(base_size = 12) +
+    theme(
+      legend.position = "right",
+      strip.background = element_rect(fill = "white"),
+      strip.text = element_text(face = "bold")
+    )
+}
+
+plot_bact_cog_by_taxa <- plot_cog_stacks(bact_cog_rel, "Bacteria: COG distribution by focus taxa")
+plot_euk_cog_by_taxa  <- plot_cog_stacks(euk_cog_rel,  "Eukaryota: COG distribution by focus taxa")
+
+```
+### =========================
+### 7) Show plots
+### =========================
+### plot_bact_cog_by_taxa
+### plot_euk_cog_by_taxa
+```{r}
+
+
+```
+### =========================
+### 8) Improving format
+### =========================
+```{r}
+
+```
+### ---- Facet order (keep your chosen order) ----
+```{r}
+bact_cog_rel <- bact_cog_rel %>%
+  mutate(Focus_taxon = factor(Focus_taxon, levels = unique(Focus_taxon)))
+euk_cog_rel  <- euk_cog_rel %>%
+  mutate(Focus_taxon = factor(Focus_taxon, levels = unique(Focus_taxon)))
+
+```
+### ---- Colors (same palettes you used) ----
+```{r}
+present_levels_bact <- levels(droplevels(bact_cog_rel$COG_lab))
+present_levels_euk  <- levels(droplevels(euk_cog_rel$COG_lab))
+
+cols_bact <- colorRampPalette(RColorBrewer::brewer.pal(12, "Set3"))(length(present_levels_bact))
+names(cols_bact) <- present_levels_bact
+cols_euk  <- colorRampPalette(RColorBrewer::brewer.pal(12, "Paired"))(length(present_levels_euk))
+names(cols_euk) <- present_levels_euk
+
+```
+### ---- Styled plotting function (thin bars, single-row facets, clean strips, no % in legend) ----
+```{r}
+plot_cog_single_row <- function(df_rel, present_levels, cols, title_txt = "") {
+  ggplot(df_rel, aes(x = Grupo, y = prop_mean, fill = COG_lab)) +
+    geom_bar(stat = "identity", position = "fill", width = 0.55) +   # thinner bars
+    scale_y_continuous(labels = scales::percent_format()) +
+    scale_fill_manual(
+      breaks = present_levels,
+      values = cols[present_levels],
+      labels = present_levels,   # <-- no percentages in legend
+      drop   = TRUE
+    ) +
+    labs(
+      title = title_txt,
+      x = "Group",
+      y = "Relative abundance (%)",
+      fill = "COG category"
+    ) +
+    facet_wrap(~ Focus_taxon, ncol = 3, scales = "free_x", strip.position = "top") +  # single row
+    theme_classic(base_size = 12) +
+    theme(
+      legend.position = "right",
+      legend.title    = element_text(size = 11),
+      legend.text     = element_text(size = 10),
+      axis.text.x     = element_text(size = 12),
+      axis.text.y     = element_text(size = 12),
+      plot.title      = element_text(size = 12, face = "plain", hjust = 0),
+      plot.margin     = margin(t = 12, r = 16, b = 6, l = 12),
+      panel.spacing.x = unit(1.0, "lines"),
+      strip.background = element_blank(),           # remove the rectangle
+      strip.text       = element_text(face = "plain", size = 12, margin = margin(b = 6))
+    )
+}
+
+```
+### ---- Final plots in your format ----
+```{r}
+plot_bacteria_cog <- plot_cog_single_row(
+  df_rel = bact_cog_rel,
+  present_levels = present_levels_bact,
+  cols = cols_bact,
+  title_txt = ""  # keep empty like your 2nd figure
+)
+
+plot_eukaryota_cog <- plot_cog_single_row(
+  df_rel = euk_cog_rel,
+  present_levels = present_levels_euk,
+  cols = cols_euk,
+  title_txt = ""
+)
+
+```
+### ---- Show ----
+### plot_bacteria_cog
+### plot_eukaryota_cog
+```{r}
+
+
+```
+### =========================
+### 9) Corrections
+### =========================
+```{r}
+
+
+```
+### ---- Complete missing groups with zeros (so both Rural/Urban always appear) ----
+```{r}
+complete_groups_for_plot <- function(df_rel) {
+  all_cogs <- sort(unique(df_rel$COG_primary))
+  out <- df_rel %>%
+    dplyr::group_by(Focus_taxon) %>%
+    tidyr::complete(Grupo = c("Rural","Urban"),
+                    COG_primary = all_cogs,
+                    fill = list(prop_mean = 0)) %>%
+    dplyr::ungroup() %>%
+    dplyr::mutate(
+      COG_lab = factor(paste0(COG_primary, " — ", cog_labels[COG_primary]),
+                       levels = paste0(names(cog_labels), " — ", cog_labels))
+    )
+  out
+}
+
+bact_cog_rel_full <- complete_groups_for_plot(bact_cog_rel)
+euk_cog_rel_full  <- complete_groups_for_plot(euk_cog_rel)
+
+```
+### ---- Identify panels/groups with total 0 to annotate "no data" ----
+```{r}
+make_nodata_df <- function(df_rel_full) {
+  df_rel_full %>%
+    dplyr::group_by(Focus_taxon, Grupo) %>%
+    dplyr::summarise(total = sum(prop_mean), .groups = "drop") %>%
+    dplyr::filter(total == 0) %>%
+    dplyr::mutate(y = 0.03, label = "no data")  # text near baseline
+}
+bact_nodata <- make_nodata_df(bact_cog_rel_full)
+euk_nodata  <- make_nodata_df(euk_cog_rel_full)
+
+```
+### ---- Plot function: thin bars, single row, clean strips; add optional "no data" ----
+```{r}
+plot_cog_single_row <- function(df_rel, present_levels, cols, title_txt = "", nodata_df = NULL) {
+  p <- ggplot(df_rel, aes(x = Grupo, y = prop_mean, fill = COG_lab)) +
+    geom_bar(stat = "identity", position = "fill", width = 0.55) +
+    scale_y_continuous(labels = scales::percent_format()) +
+    scale_fill_manual(breaks = present_levels, values = cols[present_levels],
+                      labels = present_levels, drop = TRUE) +
+    labs(title = title_txt, x = "Group", y = "Relative abundance (%)", fill = "COG category") +
+    facet_wrap(~ Focus_taxon, nrow = 1, scales = "free_x", strip.position = "top") +
+    theme_classic(base_size = 12) +
+    theme(
+      legend.position  = "right",
+      legend.title     = element_text(size = 11),
+      legend.text      = element_text(size = 10),
+      axis.text.x      = element_text(size = 12),
+      axis.text.y      = element_text(size = 12),
+      plot.title       = element_text(size = 12, face = "plain", hjust = 0),
+      plot.margin      = margin(t = 12, r = 16, b = 6, l = 12),
+      panel.spacing.x  = unit(1.0, "lines"),
+      strip.background = element_blank(),
+      strip.text       = element_text(face = "plain", size = 12, margin = margin(b = 6))
+    )
+  if (!is.null(nodata_df) && nrow(nodata_df) > 0) {
+    p <- p + geom_text(data = nodata_df,
+                       aes(x = Grupo, y = y, label = label),
+                       inherit.aes = FALSE, size = 3, color = "grey30")
+  }
+  p
+}
+
+```
+### ---- Colors (reuse your palettes, now with completed data) ----
+```{r}
+present_levels_bact <- levels(droplevels(bact_cog_rel_full$COG_lab))
+present_levels_euk  <- levels(droplevels(euk_cog_rel_full$COG_lab))
+cols_bact <- colorRampPalette(RColorBrewer::brewer.pal(12, "Set3"))(length(present_levels_bact)); names(cols_bact) <- present_levels_bact
+cols_euk  <- colorRampPalette(RColorBrewer::brewer.pal(12, "Paired"))(length(present_levels_euk)); names(cols_euk) <- present_levels_euk
+
+```
+### ---- Plots (now always show both bars; "no data" where appropriate) ----
+```{r}
+plot_bacteria_cog <- plot_cog_single_row(bact_cog_rel_full, present_levels_bact, cols_bact, "", bact_nodata)
+plot_eukaryota_cog <- plot_cog_single_row(euk_cog_rel_full, present_levels_euk, cols_euk, "", euk_nodata)
+
+```
+### FINAL PLOT PRESENTED AT PAPER
+```{r}
+plot_bacteria_cog
+```
+### plot_eukaryota_cog *not presented for missing values in one of the groups
+```{r}
 
 ```
