@@ -37,6 +37,7 @@ Figures
    - [Part B](#part-b)
    - [Part C](#part-c)
 - [Functional annotation of genes from selected taxa](#functional-annotation-of-genes-from-selected-taxa)
+- [Differential enrichment of COG categories in Blautia and Clostridia between Rural and Urban groups](#diff-enr)
 
 ---
 
@@ -5144,4 +5145,533 @@ plot_eukaryota_cog <- plot_cog_single_row(euk_cog_rel_full, present_levels_euk, 
 ```{r}
 plot_bacteria_cog
 plot_eukaryota_cog *not presented for missing values in one of the groups
+```
+
+<a id="diff-enr"></a>
+## Differential enrichment of COG categories in Blautia and Clostridia between Rural and Urban groups
+```{r}
+
+suppressPackageStartupMessages({
+  library(dplyr); library(tidyr); library(ggplot2); library(scales); library(patchwork)
+})
+
+```
+### Optional: palette for Group (same as your example)
+```{r}
+pal_group <- c(Rural = " # E9B44C", Urban = "#4F86C6")
+
+```
+### --- Load data ---
+```{r}
+anot <- read.csv("/home/alumno21/axel/files/all_annotations_trimmed.csv",
+                 sep = ",", stringsAsFactors = FALSE)
+
+```
+### --- Define files by group ---
+```{r}
+urban_files <- c("37082_2 # 1", "37082_1#20", "37082_1#27", "37035_2#13", "37035_1#29",
+                 "37082_2 # 14", "37035_2#12", "37035_2#6", "37082_1#17", "37035_2#14",
+                 "37082_1 # 26", "37035_1#30", "37035_1#32", "37082_1#15", "37082_2#15",
+                 "37082_1 # 13", "37035_2#10", "37082_1#31", "37035_2#17", "37035_2#8",
+                 "37035_2 # 23", "37035_2#31", "37035_2#24", "37082_2#5", "36703_3#5",
+                 "37082_1 # 10", "36703_3#7", "37082_2#9", "37082_2#3", "37035_2#2",
+                 "37035_2 # 3", "37035_2#19", "37035_2#21", "36703_3#1", "37082_1#24",
+                 "36703_3 # 2", "37035_2#4", "37035_2#15", "37035_2#18", "37035_2#28",
+                 "37082_2 # 13", "37082_1#22", "37082_1#29", "37082_1#19", "37035_2#30",
+                 "37082_1 # 16", "37035_1#31", "37035_2#7", "37082_1#30", "37035_2#16",
+                 "37082_2 # 11", "37082_1#14", "37035_2#5", "37082_2#4", "37082_1#18",
+                 "37035_2 # 1", "37082_1#23", "37082_2#12", "37082_1#11", "37082_1#12",
+                 "37035_2 # 11", "37035_2#25", "37082_1#32", "37082_1#9", "37035_2#29",
+                 "37082_1 # 21", "37082_2#2", "37035_2#27", "36703_3#3", "37082_2#6",
+                 "37035_2 # 20", "37082_2#7", "37082_2#8", "37082_2#10", "37082_1#28",
+                 "36703_3 # 10", "37035_2#9", "37082_1#25", "36703_3#8", "36703_3#9",
+                 "37035_2 # 26", "36703_3#6", "37035_2#32", "36703_3#4", "37035_2#22")
+rural_files <- c("37082_3 # 17", "37082_3#15", "37035_1#22", "36703_3#31", "37082_2#24",
+                 "36703_3 # 26", "37035_7#10", "36703_3#21", "37082_2#22", "37035_7#2",
+                 "37082_3 # 7", "37035_7#6", "37035_1#7", "37035_7#9", "37082_2#30",
+                 "37035_1 # 18", "37035_7#4", "37082_3#13", "37082_3#32", "37035_1#8",
+                 "37035_7 # 7", "37035_1#19", "37082_3#29", "37035_7#13", "37035_7#12",
+                 "37082_2 # 16", "36703_3#25", "37082_3#27", "37082_3#5", "37082_3#21",
+                 "37082_2 # 19", "37082_3#16", "37035_1#5", "37082_3#1", "37035_7#11",
+                 "37035_7 # 5", "36703_3#13", "37035_7#14", "37035_1#1", "37082_3#11",
+                 "37035_1 # 10", "37035_1#12", "37082_3#4", "36703_3#17", "36703_3#27",
+                 "37082_3 # 19", "37082_2#18", "36703_3#29", "36703_3#12", "36703_3#32",
+                 "37035_1 # 15", "37035_1#27", "37035_1#13", "37035_7#8", "37035_1#6",
+                 "37082_3 # 24", "36703_3#30", "37035_7#1", "37035_1#16", "37035_7#15",
+                 "37082_3 # 26", "37035_1#23", "37035_1#2", "37082_2#27", "37035_7#3",
+                 "37082_2 # 20", "36703_3#16", "37082_3#8", "37035_1#25", "36703_3#14",
+                 "37082_3 # 3", "37035_1#4", "37082_2#29", "37082_3#30", "37082_2#31",
+                 "37035_7 # 22", "37035_7#16", "37082_2#17", "36703_3#18", "37035_1#11",
+                 "37035_1 # 3", "37035_1#14", "37082_3#9", "36703_3#23", "37082_2#28",
+                 "37082_2 # 21", "37082_3#31", "36703_3#20", "37082_2#25", "36703_3#19",
+                 "37082_2 # 26", "37082_3#6", "37035_1#17", "37082_2#23", "36703_3#15",
+                 "36703_3 # 28", "37082_3#12", "37082_2#32", "37082_3#10", "36703_3#22",
+                 "37082_3 # 28", "36703_3#24", "37082_3#18", "37082_3#20", "37035_1#24",
+                 "37082_3 # 23", "37082_3#2", "37035_1#20", "37082_3#22", "37082_3#25",
+                 "37082_3 # 14", "37035_1#9", "36703_3#11", "37035_1#21", "37035_7#20",
+                 "37035_7 # 17", "37035_7#21", "37035_7#19", "37035_1#26", "37035_7#24",
+                 "37035_7 # 18", "37035_7#23", "37035_7#25")
+
+assign_domain <- function(term) {
+  term_lower <- tolower(term)
+  if (grepl("virus|myoviridae|caudovirales|podoviridae|siphoviridae|ssdna|dsdna", term_lower)) "Viral"
+  else if (grepl("bacteria", term_lower)) "Bacteria"
+  else if (grepl("archaea", term_lower)) "Archaea"
+  else if (grepl("eukaryota", term_lower)) "Eukaryota"
+  else if (term_lower == "root") "Other" else "Other"
+}
+
+clean_pref_name <- function(x) {
+  ifelse(grepl("\\|", x), sub(".*\\|", "", x), x)
+}
+```
+### Robust, UID-based NCBI classification with cleaning and synonym fixes
+```{r}
+ncbi_classification_cached <- function(names_vec,
+                                       ranks_keep = c("species","genus","family","order","class","phylum","superkingdom"),
+                                       cache_path = "taxize_ncbi_cache_uid.rds") {
+  canonize <- function(x) {
+    x <- stringr::str_trim(x)
+    x <- sub("^unclassified\\s+", "", x, ignore.case = TRUE)
+    syn <- c(
+      "Bacteroidetes"   = "Bacteroidota",
+      "Planctomycetes"  = "Planctomycetota",
+      "Spirochaetes"    = "Spirochaetota",
+      "Fusobacteria"    = "Fusobacteriota",
+      "Aquificae"       = "Aquificota",
+      "Tenericutes"     = "Mycoplasmatota"
+    )
+    if (!is.na(x) && nzchar(x) && x %in% names(syn)) x <- syn[[x]]
+    x
+  }
+  
+  nm_clean <- unique(vapply(names_vec, canonize, character(1)))
+  nm_clean <- nm_clean[!is.na(nm_clean) & nm_clean != "" & nm_clean != "-"]
+  nm_clean <- nm_clean[grepl("[A-Za-z]", nm_clean)]
+  if (length(nm_clean) == 0) {
+    return(tibble::tibble(query_name = character(), lineage = character()))
+  }
+  
+  cache <- if (file.exists(cache_path)) readRDS(cache_path) else list()
+  to_query <- setdiff(nm_clean, names(cache))
+  
+  if (length(to_query) > 0) {
+    for (nm in to_query) {
+      uid <- suppressWarnings(taxize::get_uid(nm, ask = FALSE, messages = FALSE, rows = 1))
+      if (is.null(uid) || is.na(uid)) { cache[[nm]] <- NA_character_; next }
+      cl <- try(suppressWarnings(taxize::classification(uid, db = "ncbi")[[1]]), silent = TRUE)
+      if (inherits(cl, "try-error") || is.null(cl)) { cache[[nm]] <- NA_character_; next }
+      cl2 <- cl[cl$rank %in% ranks_keep, , drop = FALSE]
+      lineage <- if (nrow(cl2) > 0) paste(cl2$name, collapse = ";") else NA_character_
+      cache[[nm]] <- lineage
+```
+### Sys.sleep(0.34) # be nice to NCBI (optional)
+```{r}
+    }
+    saveRDS(cache, cache_path)
+  }
+  
+  tibble::tibble(
+    query_name = names(cache),
+    lineage    = unname(unlist(cache))
+  )
+}
+infer_cog_from_columns <- function(df,
+                                   cols_to_scan = c("COG_category","EC","KEGG_ko","KEGG_Pathway",
+                                                    "Description","GOs","Preferred_name",
+                                                    "eggNOG_OGs","BRITE","PFAMs","CAZy",
+                                                    "BiGG_Reaction","KEGG_Module",
+                                                    "KEGG_Reaction","KEGG_rclass","KEGG_TC",
+                                                    "max_annot_lvl","max_annot_lvl_clean",
+                                                    "Preferred_name_clean"),
+                                   id_cols = c("File","MAG","query")) {
+  cols_to_scan <- intersect(cols_to_scan, names(df))
+  stopifnot(all(id_cols %in% names(df)))
+  if (length(cols_to_scan) == 0) stop("No candidate columns to scan were found in the data frame.")
+  
+  valid_cogs <- c("J","A","K","L","B","D","Y","V","T","M","N","Z","W","U","O",
+                  "C","G","E","F","H","I","P","Q","R","S")
+  
+  delim   <- "[\\s,;|/()\\[\\]{}:_-]"
+  pattern <- paste0("(?:(?<=^)|(?<=", delim, "))(", paste(valid_cogs, collapse="|"),
+                    ")(?=(?:$|", delim, "))")
+  
+  long_scan <- df %>%
+    mutate(across(all_of(cols_to_scan), ~as.character(.))) %>%
+    select(all_of(id_cols), everything()) %>%
+    pivot_longer(cols = all_of(cols_to_scan), names_to = "field", values_to = "value") %>%
+    filter(!is.na(value), value != "-") %>%
+    mutate(value_up = toupper(value))
+  
+  cogs_raw <- long_scan %>%
+    mutate(matches = stringr::str_extract_all(value_up, pattern)) %>%
+    select(all_of(id_cols), matches) %>%
+    tidyr::unnest(matches, keep_empty = FALSE) %>%
+    rename(cog = matches) %>%
+    filter(!is.na(cog))
+  
+  cogs_per_gene <- cogs_raw %>% distinct(across(all_of(id_cols)), cog)
+  
+  cog_mode <- cogs_raw %>%
+    group_by(across(all_of(id_cols)), cog) %>%
+    summarise(n = n(), .groups = "drop_last") %>%
+    arrange(desc(n), cog) %>%
+    slice_head(n = 1) %>%
+    ungroup() %>%
+    rename(COG_primary = cog)
+  
+  cog_set <- cogs_per_gene %>%
+    group_by(across(all_of(id_cols))) %>%
+    summarise(COG_inferred = paste(sort(unique(cog)), collapse = ","), .groups = "drop")
+  
+  df %>% left_join(cog_set, by = id_cols) %>% left_join(cog_mode, by = id_cols)
+}
+
+```
+### Match lineage with focus taxa (returns vector of matches per lineage)
+```{r}
+match_focus_taxa <- function(lineage_str, focus_taxa) {
+  if (is.na(lineage_str) || lineage_str == "") return(character(0))
+  hits <- focus_taxa[vapply(focus_taxa, function(tx) {
+    grepl(paste0("(^|;)", tx, "(;|$)"), lineage_str)
+  }, logical(1))]
+  hits
+}
+```
+### --- Step 1: Prepare data ---
+```{r}
+anot <- anot %>%
+  filter(grepl("\\|", max_annot_lvl)) %>%
+  mutate(
+    max_annot_lvl_clean = sub(".*\\|", "", max_annot_lvl),
+    Domain_simplified = sapply(max_annot_lvl_clean, assign_domain),
+    Grupo = case_when(
+      File %in% rural_files ~ "Rural",
+      File %in% urban_files ~ "Urban",
+      TRUE ~ NA_character_
+    )
+  ) %>%
+  filter(!is.na(Grupo))
+
+anot_prep <- anot %>%
+  filter(grepl("\\|", max_annot_lvl)) %>%
+  mutate(
+    max_annot_lvl_clean = sub(".*\\|", "", max_annot_lvl),
+    Domain_simplified   = vapply(max_annot_lvl_clean, assign_domain, character(1)),
+    Grupo = case_when(
+      File %in% rural_files ~ "Rural",
+      File %in% urban_files ~ "Urban",
+      TRUE ~ NA_character_
+    ),
+    Preferred_name_clean = clean_pref_name(Preferred_name)
+  ) %>%
+  filter(!is.na(Grupo), Preferred_name_clean != "")
+
+```
+### Add inferred COGs
+```{r}
+anot_prep <- infer_cog_from_columns(anot_prep)
+
+```
+### =========================
+### 2) NCBI lineages for all Preferred_name_clean (cached)
+### =========================
+```{r}
+all_names <- unique(anot_prep$Preferred_name_clean)
+lin_tbl <- ncbi_classification_cached(all_names)
+anot_prep <- anot_prep %>%
+  left_join(lin_tbl, by = c("Preferred_name_clean" = "query_name"))
+
+```
+### =========================
+### 3) Focus taxa (from your Figure 1 legends)
+### =========================
+```{r}
+focus_bacteria <- c("Clostridia","Clostridiaceae","Blautia","Bacteroidota","Bacilli")
+focus_euk      <- c("Ascomycota","Bilateria","Magnoliopsida","Opisthokonta","Streptophyta")
+
+```
+### Keep only focus taxa that actually appear in the lineages
+```{r}
+present_in_lineages <- function(focus, lineages) {
+  hits <- vapply(focus, function(tx) any(grepl(paste0("(^|;)", tx, "(;|$)"), lineages, useBytes = TRUE)), logical(1))
+  focus[hits]
+}
+present_bact <- present_in_lineages(focus_bacteria, na.omit(anot_prep$lineage))
+present_euk  <- present_in_lineages(focus_euk,      na.omit(anot_prep$lineage))
+
+```
+### =========================
+### 4) Expand to long by focus taxon
+### =========================
+```{r}
+expand_focus <- function(df, domain_filter, focus_taxa) {
+  df %>%
+    filter(Domain_simplified == domain_filter, !is.na(lineage)) %>%
+    mutate(focus_list = purrr::map(lineage, match_focus_taxa, focus_taxa = focus_taxa)) %>%
+    filter(lengths(focus_list) > 0) %>%
+    tidyr::unnest(focus_list) %>%
+    rename(Focus_taxon = focus_list)
+}
+bact_focus_long <- expand_focus(anot_prep, "Bacteria", present_bact)
+euk_focus_long  <- expand_focus(anot_prep, "Eukaryota", present_euk)
+
+```
+### If you don't have cog_labels in your env, define a minimal mapping
+```{r}
+if (!exists("cog_labels")) {
+  cog_labels <- c(
+    J="Translation, ribosome, biogenesis", A="RNA/nuclear processes (rare)",
+    K="Transcription", L="Replication, recombination & repair",
+    B="Chromatin structure (rare)", D="Cell cycle & division",
+    Y="Other uncommon", V="Intracellular trafficking & secretion",
+    T="Chaperones & folding", M="Cell wall/membrane/envelope",
+    N="Cell motility", Z="Cytoskeleton", W="Organelles",
+    U="Cofactors & vitamins", O="Post-translational modification",
+    C="Energy production & conversion", G="Carbohydrate metabolism",
+    E="Amino acid metabolism", F="Nucleotide metabolism",
+    H="Coenzyme metabolism", I="Lipid metabolism",
+    P="Inorganic ion transport & metabolism",
+    Q="Secondary metabolites biosynthesis",
+    R="General function prediction only", S="Function unknown"
+  )
+}
+
+```
+### ===============================
+### Main plot: grouped bars + brackets + stars (no SE, no q)
+### ===============================
+```{r}
+
+```
+### ---- Build per-file compositions (reusable) ----
+```{r}
+per_file_cog <- function(focus_long_df) {
+  focus_long_df %>%
+    dplyr::filter(!is.na(COG_primary), COG_primary != "") %>%
+    dplyr::group_by(File, Grupo, Focus_taxon, COG_primary) %>%
+    dplyr::summarise(n_genes = dplyr::n(), .groups = "drop_last") %>%
+    dplyr::group_by(File, Grupo, Focus_taxon) %>%
+    dplyr::mutate(prop = n_genes / sum(n_genes)) %>%
+    dplyr::ungroup()
+}
+
+bact_perfile <- per_file_cog(bact_focus_long)
+euk_perfile  <- per_file_cog(euk_focus_long)
+
+plot_cog_groupbars_style <- function(perfile_df, focus_taxon,
+                                     top_n = 6, alpha = 0.05, min_diff = 0.03, min_n = 3,
+                                     sig_only = TRUE, show_values = TRUE) {
+  df <- perfile_df %>% dplyr::filter(Focus_taxon == !!focus_taxon)
+  
+```
+### choose top COGs by overall mean
+```{r}
+  top_cogs <- df %>%
+    dplyr::group_by(COG_primary) %>%
+    dplyr::summarise(mean_all = mean(prop, na.rm = TRUE), .groups = "drop") %>%
+    dplyr::arrange(dplyr::desc(mean_all)) %>%
+    dplyr::slice_head(n = top_n) %>%
+    dplyr::pull(COG_primary)
+  df <- df %>% dplyr::filter(COG_primary %in% top_cogs)
+  
+```
+### group means (%)
+```{r}
+  group_avg <- df %>%
+    dplyr::group_by(Grupo, COG_primary) %>%
+    dplyr::summarise(mean_pct = 100*mean(prop, na.rm = TRUE), .groups = "drop") %>%
+    dplyr::mutate(
+      COG_lab = factor(paste0(COG_primary, " — ", cog_labels[COG_primary]),
+                       levels = paste0(top_cogs, " — ", cog_labels[top_cogs]))
+    )
+  
+```
+### Wilcoxon per COG (BH within panel)
+```{r}
+  tests <- df %>%
+    dplyr::group_by(COG_primary) %>%
+    dplyr::summarise(
+      n_R = sum(Grupo == "Rural"),
+      n_U = sum(Grupo == "Urban"),
+      p = {
+        x <- prop[Grupo == "Rural"]; y <- prop[Grupo == "Urban"]
+        if (length(x) >= min_n && length(y) >= min_n)
+          suppressWarnings(stats::wilcox.test(x, y)$p.value)
+        else NA_real_
+      },
+      mean_R = 100*mean(prop[Grupo == "Rural"], na.rm = TRUE),
+      mean_U = 100*mean(prop[Grupo == "Urban"], na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    dplyr::mutate(
+      q = p.adjust(p, method = "BH"),
+      delta = mean_R - mean_U,
+      stars = dplyr::case_when(
+        is.na(q) ~ "",
+        q < 1e-4 ~ "****",
+        q < 1e-3 ~ "***",
+        q < 1e-2 ~ "**",
+        q < 0.05 ~ "*",
+        TRUE ~ ""
+      )
+    )
+  
+  tests_sig <- tests %>% dplyr::filter(stars != "", abs(delta) >= 100*min_diff)
+  
+```
+### keep only significant COGs if requested
+```{r}
+  if (sig_only) {
+    if (nrow(tests_sig) == 0) {
+      return(
+        ggplot() +
+          annotate("text", x = 0.5, y = 0.5, label = "No significant COGs",
+                   size = 5, fontface = "bold") +
+          labs(title = focus_taxon) +
+          theme_void(base_size = 12)
+      )
+    }
+    keep_cogs <- tests_sig$COG_primary
+    group_avg <- group_avg %>% dplyr::filter(COG_primary %in% keep_cogs)
+    tests     <- tests_sig
+  } else {
+    tests <- tests_sig
+  }
+  
+  
+  
+```
+### --- DROP unused levels after the sig_only filter ---
+```{r}
+  group_avg <- group_avg %>%
+    dplyr::mutate(COG_lab = forcats::fct_drop(COG_lab))
+  
+```
+### y-posición del bracket: un poco arriba de la barra más alta de cada COG
+```{r}
+  anno_y <- group_avg %>%
+    dplyr::group_by(COG_lab) %>%
+    dplyr::summarise(y = max(mean_pct, na.rm = TRUE) * 1.10, .groups = "drop")
+  
+```
+### mapa de posiciones reales en x para lo que SÍ se dibuja
+```{r}
+  x_map <- group_avg %>%
+    dplyr::distinct(COG_lab) %>%
+    dplyr::arrange(COG_lab) %>%
+    dplyr::mutate(gx = dplyr::row_number(),
+                  off = 0.23, # mismo offset que usas en las barras
+                  x_rural = gx - off,
+                  x_urban = gx + off)
+  
+```
+### brackets + estrellas usando el mapa de posiciones reales
+```{r}
+  brackets_manual <- tests %>%
+    dplyr::mutate(
+      COG_lab = factor(paste0(COG_primary, " — ", cog_labels[COG_primary]),
+                       levels = levels(group_avg$COG_lab))
+    ) %>%
+    dplyr::inner_join(x_map,  by = "COG_lab") %>%
+    dplyr::left_join(anno_y, by = "COG_lab")
+  
+  
+  
+  p <- ggplot(group_avg, aes(x = COG_lab, y = mean_pct, fill = Grupo)) +
+    geom_col(position = position_dodge(width = 0.8),
+             width = 0.7, color = "black", linewidth = 0.2) +
+    {if (show_values)
+      geom_text(aes(label = sprintf("%.1f%%", mean_pct)),
+                position = position_dodge(width = 0.8),
+                vjust = 0, size = 3)} +
+```
+### bracket & stars (single panel, grouped bars)
+```{r}
+    geom_segment(data = brackets_manual,
+                 aes(x = x_rural, xend = x_urban, y = y, yend = y),
+                 inherit.aes = FALSE, linewidth = 0.6) +
+    geom_segment(data = brackets_manual,
+                 aes(x = x_rural, xend = x_rural, y = y, yend = y - 0.02*max(group_avg$mean_pct, na.rm=TRUE)),
+                 inherit.aes = FALSE, linewidth = 0.6) +
+    geom_segment(data = brackets_manual,
+                 aes(x = x_urban, xend = x_urban, y = y, yend = y - 0.02*max(group_avg$mean_pct, na.rm=TRUE)),
+                 inherit.aes = FALSE, linewidth = 0.6) +
+    geom_text(data = brackets_manual,
+              aes(x = gx, y = y + 0.01*max(group_avg$mean_pct, na.rm=TRUE), label = stars),
+              inherit.aes = FALSE, vjust = -0.2, size = 5) +
+    scale_fill_manual(values = pal_group, name = "Group") +
+    scale_x_discrete(labels = function(x) substr(x, 1, 1)) +
+    scale_y_continuous(labels = label_percent(scale = 1, accuracy = 0.1),
+                       expand = expansion(mult = c(0, 0.18))) +
+    labs(title = focus_taxon, x = "COG", y = "Mean per sample") +
+    theme_minimal(base_size = 11) +
+    theme(
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      axis.line.x.bottom = element_line(),
+      axis.line.y.left   = element_line(),
+      axis.text.x = element_text(angle = 0, hjust = 1),
+      plot.title = element_text(hjust = 0.5, size = 11, face = "plain",
+                                margin = margin(t = 8, b = 6)),
+      plot.margin = margin(15, 12, 12, 12)
+    )
+  p
+}
+
+```
+### ===============================
+### 
+### ===============================
+```{r}
+make_taxon_plots_groupstyle <- function(perfile_df, taxa_vec,
+                                        top_n = 6, alpha = 0.05, min_diff = 0.03, min_n = 3,
+                                        sig_only = TRUE, show_values = TRUE) {
+  pls <- lapply(taxa_vec, function(tx)
+    plot_cog_groupbars_style(
+      perfile_df, focus_taxon = tx,
+      top_n = top_n, alpha = alpha, min_diff = min_diff, min_n = min_n,
+      sig_only = sig_only, show_values = show_values
+    )
+  )
+  names(pls) <- taxa_vec
+  pls
+}
+
+```
+### ===============================
+### PLOTS
+### ===============================
+### Choose taxa present in your data:
+```{r}
+bact_taxa <- intersect(c("Blautia","Clostridia"),
+                       unique(bact_perfile$Focus_taxon))
+
+euk_taxa  <- intersect(c("Ascomycota","Bilateria","Magnoliopsida","Opisthokonta","Streptophyta"),
+                       unique(euk_perfile$Focus_taxon))
+
+```
+### Build lists of plots
+```{r}
+bact_plots <- make_taxon_plots_groupstyle(bact_perfile, bact_taxa,
+                                          top_n = 6, min_diff = 0.03, sig_only = TRUE)
+euk_plots  <- make_taxon_plots_groupstyle(euk_perfile,  euk_taxa,
+                                          top_n = 6, min_diff = 0.03, sig_only = TRUE)
+
+```
+### Combine with patchwork (one row; shared legend)
+```{r}
+bact_combined <- wrap_plots(bact_plots, nrow = 1, guides = "collect") &
+  theme(legend.position = "right")
+euk_combined  <- wrap_plots(euk_plots,  nrow = 1, guides = "collect") &
+  theme(legend.position = "right")
+
+```
+### Show
+```{r}
+bact_combined
+```
+### euk_combined no significant data
+```{r}
+
 ```
