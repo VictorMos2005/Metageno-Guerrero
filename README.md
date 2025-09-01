@@ -5826,10 +5826,9 @@ anot <- anot %>%
 ### =========================================
 ### 2. Crear anot_with_cog
 ### =========================================
-### add COG_primary column from IDs/descriptions
+### Add COG_primary column from IDs/descriptions
 ```{r}
 anot_with_cog <- infer_cog_from_columns(anot)
-
 ```
 ### --- 1) Ensure File column ---
 ```{r}
@@ -5844,7 +5843,7 @@ if (!"File" %in% names(anot_with_cog)) {
 
 
 ```
-### Normaliza valores exactos
+### Normalize normal values
 ```{r}
 anot_with_cog <- anot_with_cog %>%
   mutate(Grupo = ifelse(Grupo %in% c("Rural","Urban"), Grupo, NA_character_))
@@ -5931,7 +5930,7 @@ if (!"lineage_ncbi" %in% names(anot_with_cog)) {
                                          ranks_keep = c("species","genus","family","order","class","phylum","superkingdom"),
                                          cache_path = "taxize_ncbi_cache_uid.rds") {
 ```
-### intenta cargar taxize; si no está, sal con NA sin romper
+### Try loading Taxize; if it's not there, leave with NA without breaking
 ```{r}
     if (!requireNamespace("taxize", quietly = TRUE)) {
       warning("Paquete 'taxize' no disponible; 'lineage_ncbi' se dejará como NA.")
@@ -5941,7 +5940,7 @@ if (!"lineage_ncbi" %in% names(anot_with_cog)) {
     
     nm <- unique(.clean_ncbi_name(names_vec))
 ```
-### filtra vacíos, guiones, y entradas sin letras
+### Filter empty spaces, dashes and entries without letter
 ```{r}
     nm <- nm[!is.na(nm) & nm != "-" & grepl("[A-Za-z]", nm)]
     
@@ -5951,7 +5950,7 @@ if (!"lineage_ncbi" %in% names(anot_with_cog)) {
     if (length(to_query) > 0) {
       for (n in to_query) {
 ```
-### protection: do not send empty queries
+### Protection: do not send empty queries
 ```{r}
         if (is.na(n) || !nzchar(n) || !grepl("[A-Za-z]", n)) { cache[[n]] <- NA_character_; next }
         
@@ -5968,10 +5967,6 @@ if (!"lineage_ncbi" %in% names(anot_with_cog)) {
         cl2 <- cl[cl$rank %in% ranks_keep, , drop = FALSE]
         cache[[n]] <- if (nrow(cl2) > 0) paste(cl2$name, collapse = ";") else NA_character_
         
-```
-### optional, be polite with NCBI
-### Sys.sleep(0.2)
-```{r}
       }
       saveRDS(cache, cache_path)
     }
@@ -6153,8 +6148,7 @@ analyze_paths_for_micro <- function(anot,
 
 ```
 ### =========================================
-### Build subsets (Blautia, Clostridia, Ascomycota)
-### and merge into volcano_df
+### Build subsets (Blautia, Clostridia, Ascomycota) and merge into volcano_df
 ### =========================================
 ```{r}
 
@@ -6207,7 +6201,7 @@ plot_volcano_all <- function(df_all,
         TRUE                  ~ -log10(p_raw)
       ),
 ```
-### mantener etiquetas originales para tablas, pero crear nombre simple para la leyenda
+### Maintain original labels for the tables, but create a simple name for the legend
 ```{r}
       Microorganism = factor(Microorganism,
                              levels = c("Blautia · COG V","Clostridia · COG L/A","Ascomycota")),
@@ -6219,13 +6213,13 @@ plot_volcano_all <- function(df_all,
     )
   
 ```
-### Top 15% por evidencia (yval alto = q pequeño)
+### Top 15% por evidencia (yval alto = q pequeño) Top 15% by evidence (yval high = q low)
 ```{r}
   n_lab  <- max(1, floor(nrow(dfp) * label_top_frac))
   lab_df <- dfp %>% arrange(desc(yval)) %>% slice_head(n = n_lab)
   
 ```
-### Paletas (formas con relleno; “Tie” en gris pero fuera de la leyenda)
+### Palettes (shapes with fillers; "Tie" in gray but outside the legend)
 ```{r}
   fill_cols <- c(Rural = " # E9B44C", Urban = "#4F86C6", Tie = "grey70")
   shp_vals  <- c("Blautia" = 21, "Clostridia" = 22, "Ascomycota" = 24)
