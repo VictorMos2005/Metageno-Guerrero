@@ -4202,11 +4202,7 @@ plot_texto <- ggplot() +
 plot_funanondoms <- plot_abundancia 
 
 ```
-### Mostrar el resultado
-```{r}
-
-```
-### This
+### Show results
 ```{r}
 plot_funanondoms
 
@@ -4370,21 +4366,21 @@ top_raw_names <- porcentaje_por_name %>%
   pull(Preferred_name_clean)
 
 ```
-### Limpiar para taxize (quitar "unclassified " para evitar errores)
+### Clean for taxize (eliminate "unclassified" to avoid any errors)
 ```{r}
 cleaned_top_names <- gsub("unclassified ", "", top_raw_names)
 ```
-### Filtrar nombres vacíos, guiones o NA
+### Filter empty entries, dashes or NA
 ```{r}
 cleaned_top_names <- cleaned_top_names[cleaned_top_names != "" & cleaned_top_names != "-" & !is.na(cleaned_top_names)]
 
 ```
-### Reemplazar "Bacteroidetes" por "Bacteroidota" (nombre aceptado en NCBI)
+### Replace "Bacteroidetes" for "Bacteroidota" (NCBI approved name)
 ```{r}
 cleaned_top_names <- gsub("^Bacteroidetes$", "Bacteroidota", cleaned_top_names)
 
 ```
-### Ahora consulta con ask = TRUE para esos ambiguos, o directamente FALSE si ya limpiaste
+###  Now consult with "ask" = TRUE for those ambiguous , or directly FLASE if already cleaned
 ```{r}
 tax_data <- classification(cleaned_top_names, db = "ncbi", ask = FALSE)
 
@@ -4394,7 +4390,7 @@ tax_data <- classification(cleaned_top_names, db = "ncbi", ask = FALSE)
 tax_levels <- c("species", "genus", "family", "order", "class", "phylum", "superkingdom")
 
 ```
-### Inicializamos tax_info con el tamaño y nombres originales para evitar problemas
+### We start tax_info with the size andoriginal names to avoid issues
 ```{r}
 tax_info <- data.frame(Name = top_raw_names,
                        Taxon_especifico = NA_character_,
@@ -4405,12 +4401,12 @@ for (i in seq_along(tax_data)) {
   taxon <- tax_data[[i]]
   
 ```
-### Saltar si taxon es NULL o de clase lógica (como FALSE)
+### Skip if taxon is NULL or from logic class (as FALSE)
 ```{r}
   if (is.null(taxon) || is.logical(taxon)) next
   
 ```
-### Filtrar niveles de interés
+### Filter levels of interest
 ```{r}
   taxon_filtered <- taxon %>%
     filter(rank %in% tax_levels)
@@ -4426,12 +4422,12 @@ for (i in seq_along(tax_data)) {
 }
 
 ```
-### Agregar la columna Original_Name (el nombre completo, con posibles "unclassified")
+### Add the column Original_Name (the complete name, with possible "unclassified")
 ```{r}
 tax_info$Original_Name <- top_raw_names
 
 ```
-### Crear columna Taxon_final con prefijo "unclassified " si lo tenía el nombre original
+### Create column Taxon_final with prefix "unclassified" if the original name had it
 ```{r}
 tax_info$Taxon_final <- ifelse(grepl("^unclassified ", tax_info$Original_Name),
                                paste0("unclassified ", tax_info$Taxon_especifico),
