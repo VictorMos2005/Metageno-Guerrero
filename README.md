@@ -3986,7 +3986,7 @@ combined_busco_plot
 
 <a id="fun-anno"></a>
 ## Functional annotation profiles of high-quality MAGs
-### (>95% completeness) from Rural and Urban groups.
+#### (>95% completeness) from Rural and Urban groups.
 
 ## Part A
 ### We need the functional annotations file "all_annotations_trimmed.csv"
