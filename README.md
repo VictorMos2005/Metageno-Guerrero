@@ -2611,7 +2611,7 @@ dat0 <- kaiju_merged %>% as_tibble()
 need_cols <- c("file_base","Group","Domain","Genus","reads")
 if (!all(need_cols %in% names(dat0))) {
 ```
-### try to split taxon_name if Domain/Genus/Phylum missing
+### Try to split taxon_name if Domain/Genus/Phylum missing
 ```{r}
   if ("taxon_name" %in% names(dat0)) {
     dat0 <- dat0 %>%
@@ -2653,7 +2653,7 @@ if ("Phylum" %in% names(dat0)) {
     filter(!(Domain == "Eukaryota" & Phylum == "Chordata"))
 } else if ("taxon_name" %in% names(dat0)) {
 ```
-### extract Phylum from taxon_name if not already separated above (for safety)
+### Extract Phylum from taxon_name if not already separated above (for safety)
 ```{r}
   if (!"Phylum" %in% names(dat0)) {
     dat0 <- dat0 %>%
@@ -2677,7 +2677,7 @@ dat0 <- dat0 %>% filter(Domain %in% c("Bacteria","Eukaryota"))
 
 ```
 ### =========== Relative abundance within DOMAIN per sample ===========
-### total reads per sample and domain
+### Total reads per sample and domain
 ```{r}
 totals_domain <- dat0 %>%
   group_by(file_base, Domain) %>%
@@ -2710,7 +2710,7 @@ genus_reads_f <- genus_reads %>%
 ```{r}
 test_by_domain <- function(df_domain, domain_label) {
 ```
-### long table per sample
+### Long table per sample
 ### Wilcoxon by genus: Rural vs Urban on relative abundances (within domain)
 ```{r}
   test_tbl <- df_domain %>%
@@ -2820,7 +2820,7 @@ volcano_plot <- function(df_stats, title_txt, out_png) {
     mutate(sig = ifelse(q <= ALPHA_Q, "FDR ≤ 0.05", "NS"))
   
 ```
-### choose labels: the most significant + highest |log2FC|
+### Choose labels: the most significant + highest |log2FC|
 ```{r}
   lab_df <- df_stats %>%
     arrange(q, desc(abs(log2FC))) %>%
@@ -2873,7 +2873,7 @@ volcano_plot <- function(df_stats, title_txt, out_png) {
     mutate(sig = ifelse(q <= ALPHA_Q, "FDR ≤ 0.05", "NS"))
   
 ```
-### top labels
+### Top labels
 ```{r}
   lab_df <- df_stats %>%
     arrange(q, desc(abs(log2FC))) %>%
