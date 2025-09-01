@@ -38,7 +38,7 @@ Figures
    - [Part C](#part-c)
 - [Functional annotation of genes from selected taxa](#functional-annotation-of-genes-from-selected-taxa)
 - [Differential enrichment of COG categories in Blautia and Clostridia between Rural and Urban groups](#diff-enr)
-- FIG 14
+- [Co-occurrence networks of bacterial and eukaryotic taxa based on Spearman correlations](#occurr)
 - [Differential distribution of functional annotations reconstructed from high-quality metagenome-assembled genomes (MAGs)](#diff-dis)
 
 ---
@@ -5674,9 +5674,662 @@ bact_combined
 ##### euk_combined no significant data
 
 
-FIG 14
+<a id="occurr"></a>
+## Co-occurrence networks of bacterial and eukaryotic taxa based on Spearman correlations.
+
+### --- Required libraries ---
+```{r}
+library(dplyr)
+library(tidyr)
+library(tibble)
+library(boot)
+library(stringr)
+
+kaiju_merged$reads <- as.numeric(kaiju_merged$reads)
+
+```
+### If separate taxonomic columns do not exist but 'taxon_name' does
+```{r}
+if (!all(c("Domain","Genus") %in% names(kaiju_merged)) && "taxon_name" %in% names(kaiju_merged)) {
+  kaiju_merged <- kaiju_merged %>%
+    separate(
+      taxon_name,
+      into = c("Organism","Domain","Supergroup","Kingdom","Phylum","Class",
+               "Subclass","Order","Family","Genus","Species"),
+      sep = ";", fill = "right", extra = "drop"
+    )
+}
+
+```
+### Fill minimal gaps
+```{r}
+kaiju_merged <- kaiju_merged %>%
+  mutate(across(c(Genus, Family, Order), ~ ifelse(is.na(.) | . == "", "Unclassified", .)))
+
+```
+### file_base if needed
+```{r}
+if (!"file_base" %in% names(kaiju_merged)) {
+  if ("file" %in% names(kaiju_merged)) {
+    kaiju_merged <- kaiju_merged %>% mutate(file_base = gsub("^.*/", "", file))
+  } else {
+    stop("No 'file_base' or 'file' column found in kaiju_merged.")
+  }
+}
+
+```
+### --- Assign groups (adjust your 'urban_files' and 'rural_files' lists) ---
+```{r}
+kaiju_merged <- kaiju_merged %>%
+  mutate(Group = case_when(
+    file_base %in% paste0(urban_files, "_kaiju.out") ~ "Urban",
+    file_base %in% paste0(rural_files, "_kaiju.out") ~ "Rural",
+    TRUE ~ NA_character_
+  )) %>%
+  filter(!is.na(Group))
+cat("Número de muestras asignadas a grupos:\n"); print(table(kaiju_merged$Group))
+
+```
+### --- Filter ONLY Bacteria/Eukaryota and keep GENUS ---
+```{r}
+full_data <- kaiju_merged %>%
+  filter(Domain %in% c("Bacteria","Eukaryota")) %>%
+  filter(!is.na(Genus) & Genus != "" & Genus != "Unclassified") %>%
+  mutate(Genus = str_trim(Genus))
+
+```
+### ------------------------------------------------------------------
+### 2) PRE-FILTERING OF ABUNDANT GENERA (accelerates bootstrap)
+### (same thresholds for both domains)
+### ------------------------------------------------------------------
+```{r}
+threshold_genus <- 8 # lecturas promedio mínimas
+
+```
+### Bacteria
+```{r}
+genus_bact_urban <- full_data %>% filter(Group == "Urban",  Domain == "Bacteria") %>%
+  group_by(Genus) %>% summarise(mean_reads = mean(reads), .groups = "drop") %>%
+  filter(mean_reads > threshold_genus) %>% pull(Genus)
+
+genus_bact_rural <- full_data %>% filter(Group == "Rural",  Domain == "Bacteria") %>%
+  group_by(Genus) %>% summarise(mean_reads = mean(reads), .groups = "drop") %>%
+  filter(mean_reads > threshold_genus) %>% pull(Genus)
+
+common_genus_bact <- intersect(genus_bact_urban, genus_bact_rural)
+
+```
+### Eukaryota
+```{r}
+genus_euk_urban <- full_data %>% filter(Group == "Urban",  Domain == "Eukaryota") %>%
+  group_by(Genus) %>% summarise(mean_reads = mean(reads), .groups = "drop") %>%
+  filter(mean_reads > threshold_genus) %>% pull(Genus)
+
+genus_euk_rural <- full_data %>% filter(Group == "Rural",  Domain == "Eukaryota") %>%
+  group_by(Genus) %>% summarise(mean_reads = mean(reads), .groups = "drop") %>%
+  filter(mean_reads > threshold_genus) %>% pull(Genus)
+
+common_genus_euk <- intersect(genus_euk_urban, genus_euk_rural)
+
+cat("Common genera after filter — Bacteria:", length(common_genus_bact),
+    " | Eukaryota:", length(common_genus_euk), "\n")
+
+```
+### Keep only those abundant genera per domain
+```{r}
+full_data_filtered <- full_data %>%
+  filter((Domain == "Bacteria"  & Genus %in% common_genus_bact) |
+           (Domain == "Eukaryota" & Genus %in% common_genus_euk))
+
+```
+### ------------------------------------------------------------------
+### 3) Function to create matrix (GENUS) log2-normalized per sample
+### ------------------------------------------------------------------
+```{r}
+crear_matriz <- function(df, taxon_col = "Genus") {
+  df %>%
+    group_by(file_base, !!sym(taxon_col)) %>%
+    summarise(reads = sum(reads), .groups = "drop") %>%
+    pivot_wider(names_from = !!sym(taxon_col), values_from = reads, values_fill = 0) %>%
+    column_to_rownames("file_base") %>%
+    {
+      mat <- sweep(., 1, rowSums(.), "/") # proporción por muestra
+      log2(mat + 1e-6)
+    }
+}
+
+```
+### Matrices per group (Bacteria + Eukaryota together, columns = GENUS)
+```{r}
+mat_urban <- full_data_filtered %>% filter(Group == "Urban") %>% crear_matriz("Genus")
+mat_rural <- full_data_filtered %>% filter(Group == "Rural") %>% crear_matriz("Genus")
+
+cat("Dimensiones matriz Urban (genus):", dim(mat_urban), "\n")
+cat("Dimensiones matriz Rural (genus):", dim(mat_rural), "\n")
+
+```
+### GENUS -> DOMAIN map
+```{r}
+genus_domain_map <- full_data_filtered %>%
+  distinct(Genus, Domain)
+
+```
+### ------------------------------------------------------------------
+### 4) Bootstrap Spearman
+### ------------------------------------------------------------------
+```{r}
+bootstrap_correlation <- function(vec1, vec2, n = 200) {
+  stat <- function(data, indices) {
+    tryCatch(cor(data[indices,1], data[indices,2], method="spearman"),
+             warning=function(w) NA, error=function(e) NA)
+  }
+  boot_obj <- boot(data = cbind(vec1, vec2), statistic = stat, R = n)
+  if (all(is.na(boot_obj$t))) return(c(mean = NA, lower = NA, upper = NA))
+  ci <- tryCatch(boot.ci(boot_obj, type = "perc"), error = function(e) NULL)
+  c(mean = mean(boot_obj$t, na.rm = TRUE),
+    lower = ifelse(is.null(ci), NA, ci$percent[4]),
+    upper = ifelse(is.null(ci), NA, ci$percent[5]))
+}
+
+```
+### ------------------------------------------------------------------
+### 5) Correlations (all at GENUS level) and relationship classification
+### ------------------------------------------------------------------
+```{r}
+correlacion_spearman_boot <- function(matrix, genus_domain_map) {
+  out <- tibble()
+  pairs <- combn(colnames(matrix), 2, simplify = FALSE)
+  for (pp in pairs) {
+    g1 <- pp[1]; g2 <- pp[2]
+    x <- matrix[[g1]]; y <- matrix[[g2]]
+    if (any(is.na(x)) || any(is.na(y))) next
+    if (sd(x) == 0 || sd(y) == 0) next
+    
+    d1 <- genus_domain_map %>% filter(Genus == g1) %>% pull(Domain)
+    d2 <- genus_domain_map %>% filter(Genus == g2) %>% pull(Domain)
+    if (length(d1) != 1 || length(d2) != 1) next
+    
+    relation <- if (d1 == "Bacteria"   & d2 == "Bacteria")   "Bacteria-Bacteria" else
+      if (d1 == "Eukaryota" & d2 == "Eukaryota") "Eukaryota-Eukaryota" else
+        "Bacteria-Eukaryota"
+    boot_res <- bootstrap_correlation(x, y, n = 200)
+    out <- bind_rows(out, tibble(
+      Genus_1 = g1, Genus_2 = g2, Relation = relation,
+      Spearman_rho_mean = boot_res["mean"],
+      CI_lower = boot_res["lower"], CI_upper = boot_res["upper"]
+    ))
+  }
+  out
+}
+
+```
+### Run by group
+```{r}
+cat("Calculando correlaciones (Urban)...\n")
+edges_urban <- correlacion_spearman_boot(mat_urban, genus_domain_map)
+cat("Calculando correlaciones (Rural)...\n")
+edges_rural <- correlacion_spearman_boot(mat_rural, genus_domain_map)
+
+```
+### ------------------------------------------------------------------
+### 6) Filters by relationship and export
+### ------------------------------------------------------------------
+```{r}
+filtrar_por_relacion <- function(edges_df, relation_type) {
+  rho_thresh <- dplyr::case_when(
+    relation_type == "Bacteria-Bacteria"     ~ 0.7,
+    relation_type == "Bacteria-Eukaryota"    ~ 0.3,
+    relation_type == "Eukaryota-Eukaryota"   ~ 0.3,
+    TRUE ~ 0.3
+  )
+  edges_df %>%
+    filter(
+      Relation == relation_type,
+      abs(Spearman_rho_mean) > rho_thresh,
+      (CI_lower > 0 & CI_upper > 0) | (CI_lower < 0 & CI_upper < 0)
+    )
+}
+
+crear_nodos_de_edges <- function(edges_df, nodes_df) {
+  genes_in_edges <- unique(c(edges_df$Genus_1, edges_df$Genus_2))
+  nodes_df %>%
+    filter(Genus %in% genes_in_edges) %>%
+    transmute(ID = gsub(" ", "_", Genus), Domain)
+}
+
+relaciones <- c("Bacteria-Bacteria", "Bacteria-Eukaryota", "Eukaryota-Eukaryota")
+grupos <- list(Urban = edges_urban, Rural = edges_rural)
+
+for (grupo_nombre in names(grupos)) {
+  edges_total <- grupos[[grupo_nombre]]
+  for (rel in relaciones) {
+    edges_filtradas <- filtrar_por_relacion(edges_total, rel)
+    if (nrow(edges_filtradas) == 0) {
+      cat("Warning: No correlations in", grupo_nombre, "-", rel, "\n")
+      next
+    }
+    nodes_filtrados <- crear_nodos_de_edges(edges_filtradas, full_data_filtered)
+    
+```
+### Output files
+```{r}
+    edges_sif <- edges_filtradas %>%
+      mutate(Source = gsub(" ", "_", Genus_1),
+             Target = gsub(" ", "_", Genus_2),
+             interaction = "correlation") %>%
+      select(Source, interaction, Target)
+    
+    edges_attr <- edges_filtradas %>%
+      mutate(Source = gsub(" ", "_", Genus_1),
+             Target = gsub(" ", "_", Genus_2)) %>%
+      select(Source, Target, Relation, Spearman_rho_mean)
+    
+    nodes_attr <- nodes_filtrados %>%
+      transmute(name = ID, Domain)
+    
+    write.table(edges_sif,
+                paste0("network_", tolower(grupo_nombre), "_", rel, ".sif"),
+                sep = "\t", quote = FALSE, row.names = FALSE, col.names = FALSE)
+    
+    write.table(edges_attr,
+                paste0("edges_", tolower(grupo_nombre), "_", rel, ".txt"),
+                sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
+    
+    write.table(nodes_attr,
+                paste0("nodes_", tolower(grupo_nombre), "_", rel, ".txt"),
+                sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
+  }
+}
+
+cat("Done! Networks (GENUS) exported by relationship and group.\n")
 
 
+
+```
+### ===================== Adjustments (much stricter) =====================
+```{r}
+
+
+
+
+suppressPackageStartupMessages({
+  library(dplyr); library(tidyr); library(tibble)
+  library(stringr); library(boot)
+})
+set.seed(1234)
+```
+### Filters by group (prevalence and mean %, NORMALIZED BY DOMAIN)
+```{r}
+MIN_PREV_BACT <- 0.20
+MIN_PREV_EUK  <- 0.10
+MIN_MEAN_BACT <- 0.06 # % dentro de Bacteria
+MIN_MEAN_EUK  <- 0.015 # % dentro de Eukaryota
+TOP_N_BACT    <- 250
+TOP_N_EUK     <- 120
+
+```
+### Correlación / Bootstrap
+```{r}
+BOOT_R               <- 300
+PSEUDO               <- 1e-6
+PRESCREEN_ABS_RHO    <- 0.35 # global (antes 0.20)
+PRESCREEN_ABS_RHO_WL <- 0.20 # si toca whitelist
+MIN_SAMPLES_PER_G    <- 8
+
+```
+### Minimum co-occurrence (samples where BOTH > 0)
+```{r}
+MIN_COOC_FRAC <- 0.35 # ≥35% de las muestras del grupo
+MIN_COOC_ABS  <- 20 # y al menos 20 muestras
+
+```
+### Final edge filter (only BE)
+```{r}
+THRESH_BE <- 0.45 # |rho_mean| mínimo
+ALPHA_Q   <- 0.05 # BH FDR
+
+```
+### ===================== Whitelist of key genera =====================
+```{r}
+force_include_euk  <- c("Saccharomyces")
+force_include_bact <- character(0)
+
+```
+### ======================== Datos esperados en 'kaiju_merged' ========================
+```{r}
+kaiju_merged$reads <- as.numeric(kaiju_merged$reads)
+
+if (!all(c("Domain","Genus") %in% names(kaiju_merged)) && "taxon_name" %in% names(kaiju_merged)) {
+  kaiju_merged <- kaiju_merged %>%
+    tidyr::separate(
+      taxon_name,
+      into = c("Organism","Domain","Supergroup","Kingdom","Phylum","Class",
+               "Subclass","Order","Family","Genus","Species"),
+      sep = ";", fill = "right", extra = "drop"
+    )
+}
+
+if (!"file_base" %in% names(kaiju_merged)) {
+  if ("file" %in% names(kaiju_merged)) kaiju_merged <- kaiju_merged %>% mutate(file_base = gsub("^.*/", "", file))
+  else stop("kaiju_merged needs 'file_base' or 'file'.")
+}
+
+if (!"Group" %in% names(kaiju_merged)) {
+  kaiju_merged <- kaiju_merged %>%
+    mutate(Group = case_when(
+      exists("urban_files") & file_base %in% paste0(urban_files, "_kaiju.out") ~ "Urban",
+      exists("rural_files") & file_base %in% paste0(rural_files, "_kaiju.out") ~ "Rural",
+      TRUE ~ NA_character_
+    ))
+}
+kaiju_merged <- kaiju_merged %>% filter(!is.na(Group))
+
+```
+### Only Bacteria/Eukaryota at GENUS level; exclude Homo
+```{r}
+dat <- kaiju_merged %>%
+  filter(Domain %in% c("Bacteria","Eukaryota")) %>%
+  mutate(Genus = ifelse(is.na(Genus) | Genus=="" | Genus=="Unclassified", NA, str_trim(Genus))) %>%
+  filter(!is.na(Genus)) %>%
+  filter(!(Domain=="Eukaryota" & Genus=="Homo"))
+
+```
+### ------------------------ % within DOMAIN per sample ------------------------
+```{r}
+totals_domain <- dat %>%
+  group_by(file_base, Group, Domain) %>%
+  summarise(total_reads_domain = sum(reads, na.rm = TRUE), .groups = "drop")
+
+genus_reads <- dat %>%
+  group_by(file_base, Group, Domain, Genus) %>%
+  summarise(reads = sum(reads, na.rm = TRUE), .groups = "drop") %>%
+  left_join(totals_domain, by = c("file_base","Group","Domain")) %>%
+  mutate(pct_domain = if_else(total_reads_domain > 0, 100 * reads / total_reads_domain, 0))
+
+```
+### ------------------------ prevalence and means per group -------------------
+```{r}
+prev_mean <- genus_reads %>%
+  group_by(Group, Domain, Genus) %>%
+  summarise(prevalence = mean(reads > 0),
+            mean_pct_dom = mean(pct_domain),
+            .groups = "drop")
+
+```
+### Keepers per domain + enforce whitelist
+```{r}
+keepers_bact <- prev_mean %>%
+  filter(Domain=="Bacteria") %>%
+  group_by(Genus) %>%
+  summarise(
+    ok = all(prevalence[Group=="Rural"] >= MIN_PREV_BACT,
+             prevalence[Group=="Urban"] >= MIN_PREV_BACT,
+             mean_pct_dom[Group=="Rural"] >= MIN_MEAN_BACT,
+             mean_pct_dom[Group=="Urban"] >= MIN_MEAN_BACT),
+    overall = mean(mean_pct_dom),
+    .groups = "drop"
+  ) %>% filter(ok) %>% arrange(desc(overall)) %>% slice_head(n = TOP_N_BACT) %>% pull(Genus)
+
+keepers_euk <- prev_mean %>%
+  filter(Domain=="Eukaryota") %>%
+  group_by(Genus) %>%
+  summarise(
+    ok = all(prevalence[Group=="Rural"] >= MIN_PREV_EUK,
+             prevalence[Group=="Urban"] >= MIN_PREV_EUK,
+             mean_pct_dom[Group=="Rural"] >= MIN_MEAN_EUK,
+             mean_pct_dom[Group=="Urban"] >= MIN_MEAN_EUK),
+    overall = mean(mean_pct_dom),
+    .groups = "drop"
+  ) %>% filter(ok) %>% arrange(desc(overall)) %>% slice_head(n = TOP_N_EUK) %>% pull(Genus)
+
+keepers_bact <- union(keepers_bact,
+                      intersect(force_include_bact, unique(dat$Genus[dat$Domain=="Bacteria"])))
+keepers_euk  <- union(keepers_euk,
+                      intersect(force_include_euk,  unique(dat$Genus[dat$Domain=="Eukaryota"])))
+
+message("Kept genera (domain-normalized) — Bacteria=", length(keepers_bact),
+        " | Eukaryota=", length(keepers_euk))
+
+dat_filt <- genus_reads %>%
+  filter((Domain=="Bacteria"  & Genus %in% keepers_bact) |
+           (Domain=="Eukaryota" & Genus %in% keepers_euk))
+
+```
+### ======================= matrices per group (counts + CLR) ======================
+```{r}
+counts_from_long <- function(df_long, group) {
+  df_long %>%
+    filter(Group == group) %>%
+    select(file_base, Genus, reads) %>%
+    group_by(file_base, Genus) %>%
+    summarise(reads = sum(reads), .groups = "drop") %>%
+    pivot_wider(names_from = Genus, values_from = reads, values_fill = 0) %>%
+    column_to_rownames("file_base") %>% as.matrix()
+}
+
+clr_from_counts <- function(counts_mat) {
+  if (nrow(counts_mat) < MIN_SAMPLES_PER_G) return(NULL)
+  prop <- sweep(counts_mat, 1, rowSums(counts_mat), "/"); prop[is.na(prop)] <- 0
+  logx <- log(prop + PSEUDO); sweep(logx, 1, rowMeans(logx), "-")
+}
+
+cnt_rural <- counts_from_long(dat_filt, "Rural")
+cnt_urban <- counts_from_long(dat_filt, "Urban")
+stopifnot(nrow(cnt_rural) >= MIN_SAMPLES_PER_G, nrow(cnt_urban) >= MIN_SAMPLES_PER_G)
+
+mat_clr_rural <- clr_from_counts(cnt_rural)
+mat_clr_urban <- clr_from_counts(cnt_urban)
+
+```
+### Alinear columnas
+```{r}
+common_cols <- Reduce(intersect, list(colnames(mat_clr_rural), colnames(mat_clr_urban)))
+mat_clr_rural <- mat_clr_rural[, common_cols, drop = FALSE]
+mat_clr_urban <- mat_clr_urban[, common_cols, drop = FALSE]
+cnt_rural     <- cnt_rural[,     common_cols, drop = FALSE]
+cnt_urban     <- cnt_urban[,     common_cols, drop = FALSE]
+
+```
+### Genus -> Domain map (only common)
+```{r}
+genus_domain_map <- dat_filt %>% distinct(Genus, Domain) %>% filter(Genus %in% common_cols)
+
+```
+### =================== Prescreen + co-occurrence + bootstrap =================
+```{r}
+fast_pairwise_corr_BE <- function(mat_clr, counts_mat, genus_domain_map,
+                                  prescreen_global = PRESCREEN_ABS_RHO,
+                                  prescreen_wl     = PRESCREEN_ABS_RHO_WL,
+                                  min_cooc_frac = MIN_COOC_FRAC,
+                                  min_cooc_abs  = MIN_COOC_ABS,
+                                  boot_R = BOOT_R,
+                                  whitelist = character(0)) {
+  
+  cols <- colnames(mat_clr)
+  dom_vec <- setNames(as.character(genus_domain_map$Domain),
+                      as.character(genus_domain_map$Genus))
+  bact_cols <- cols[dom_vec[cols] == "Bacteria"]
+  euk_cols  <- cols[dom_vec[cols] == "Eukaryota"]
+  if (length(bact_cols) == 0 || length(euk_cols) == 0) return(tibble())
+  
+```
+### Co-occurrence
+```{r}
+  pres_abs <- max(min_cooc_abs, ceiling(min_cooc_frac * nrow(counts_mat)))
+  pres_mat <- counts_mat > 0
+  
+```
+### Spearman masivo = Pearson sobre rangos
+```{r}
+  mat_rank <- apply(mat_clr, 2, rank, ties.method = "average")
+  R <- stats::cor(mat_rank[, bact_cols, drop = FALSE],
+                  mat_rank[, euk_cols,  drop = FALSE],
+                  method = "pearson", use = "pairwise.complete.obs")
+  
+```
+### Candidates: global prescreen
+```{r}
+  sel_global <- which(abs(R) >= prescreen_global, arr.ind = TRUE)
+  pairs_df <- tibble(
+    Genus_1 = bact_cols[sel_global[,"row"]],
+    Genus_2 = euk_cols[ sel_global[,"col"]],
+    from_whitelist = FALSE
+  )
+  
+```
+### Extra candidates: if whitelist applies, looser prescreen
+```{r}
+  if (length(whitelist) > 0) {
+    wl_b <- intersect(bact_cols, whitelist)
+    wl_e <- intersect(euk_cols,  whitelist)
+    if (length(wl_b) > 0) {
+      R_wlb <- R[match(wl_b, bact_cols), , drop = FALSE]
+      sel_wlb <- which(abs(R_wlb) >= prescreen_wl, arr.ind = TRUE)
+      if (length(sel_wlb))
+        pairs_df <- bind_rows(pairs_df,
+                              tibble(Genus_1 = wl_b[sel_wlb[,"row"]],
+                                     Genus_2 = euk_cols[sel_wlb[,"col"]],
+                                     from_whitelist = TRUE))
+    }
+    if (length(wl_e) > 0) {
+      R_wle <- R[, match(wl_e, euk_cols), drop = FALSE]
+      sel_wle <- which(abs(R_wle) >= prescreen_wl, arr.ind = TRUE)
+      if (length(sel_wle))
+        pairs_df <- bind_rows(pairs_df,
+                              tibble(Genus_1 = bact_cols[sel_wle[,"row"]],
+                                     Genus_2 = wl_e[sel_wle[,"col"]],
+                                     from_whitelist = TRUE))
+    }
+  }
+  
+```
+### Unique + minimum co-occurrence
+```{r}
+  pairs_df <- pairs_df %>%
+    distinct(Genus_1, Genus_2, .keep_all = TRUE) %>%
+    rowwise() %>%
+    mutate(cooc = sum(pres_mat[, Genus_1] & pres_mat[, Genus_2])) %>%
+    ungroup() %>%
+    filter(cooc >= pres_abs)
+  
+  message("Prescreen pairs (post co-occur): ", nrow(pairs_df),
+          " (", sum(pairs_df$from_whitelist), " via whitelist)")
+  
+  if (nrow(pairs_df) == 0) return(tibble())
+  
+  boot_one <- function(g1, g2) {
+    x <- mat_clr[, g1]; y <- mat_clr[, g2]
+    if (sd(x) == 0 || sd(y) == 0) return(NULL)
+    ct <- suppressWarnings(cor.test(x, y, method = "spearman", exact = FALSE))
+    rho0 <- unname(ct$estimate); p0 <- ct$p.value
+    stat <- function(dd, idx) suppressWarnings(cor(dd[idx,1], dd[idx,2], method = "spearman"))
+    bt <- boot(cbind(x, y), statistic = stat, R = boot_R)
+    if (all(is.na(bt$t))) return(NULL)
+    ci <- tryCatch(boot.ci(bt, type = "perc"), error = function(e) NULL)
+```
+### Sign consistency in bootstrap
+```{r}
+    scons <- mean(sign(bt$t) == sign(rho0), na.rm = TRUE)
+    tibble(
+      Genus_1 = g1, Genus_2 = g2, Relation = "Bacteria-Eukaryota",
+      rho = rho0, p = p0,
+      rho_mean = mean(bt$t, na.rm = TRUE),
+      CI_lower = ifelse(is.null(ci), NA, ci$percent[4]),
+      CI_upper = ifelse(is.null(ci), NA, ci$percent[5]),
+      sign_consistency = scons
+    )
+  }
+  
+  out_list <- lapply(seq_len(nrow(pairs_df)), function(i) boot_one(pairs_df$Genus_1[i], pairs_df$Genus_2[i]))
+  bind_rows(out_list)
+}
+
+message("Computing BE correlations (Rural)…")
+edges_rural <- fast_pairwise_corr_BE(
+  mat_clr_rural, cnt_rural, genus_domain_map,
+  prescreen_global = PRESCREEN_ABS_RHO,
+  prescreen_wl     = PRESCREEN_ABS_RHO_WL,
+  whitelist = union(force_include_euk, force_include_bact),
+  boot_R = BOOT_R
+)
+
+message("Computing BE correlations (Urban)…")
+edges_urban <- fast_pairwise_corr_BE(
+  mat_clr_urban, cnt_urban, genus_domain_map,
+  prescreen_global = PRESCREEN_ABS_RHO,
+  prescreen_wl     = PRESCREEN_ABS_RHO_WL,
+  whitelist = union(force_include_euk, force_include_bact),
+  boot_R = BOOT_R
+)
+
+```
+### BH (todo es BE)
+```{r}
+add_q <- function(df) if (nrow(df)) df %>% mutate(q = p.adjust(p, method = "BH")) else df
+edges_rural <- add_q(edges_rural)
+edges_urban <- add_q(edges_urban)
+
+```
+### --------- Very strict final filter ----------
+```{r}
+filter_BE <- function(df) {
+  if (nrow(df)==0) return(df[0,])
+  df %>%
+    mutate(abs_rho = abs(rho_mean)) %>%
+```
+### CI must exceed threshold (not just same sign)
+```{r}
+    mutate(ci_strong = (rho_mean > 0 & CI_lower >= THRESH_BE) |
+             (rho_mean < 0 & CI_upper <= -THRESH_BE)) %>%
+    filter(
+      abs_rho >= THRESH_BE,
+      abs(rho) >= THRESH_BE, # efecto puntual también grande
+      ci_strong,
+      sign_consistency >= 0.90, # ≥90% de réplicas con el mismo signo
+      q <= ALPHA_Q
+    ) %>%
+    select(-abs_rho, -ci_strong)
+}
+
+edges_rural_f <- filter_BE(edges_rural)
+edges_urban_f <- filter_BE(edges_urban)
+
+message("BE edges kept | Rural: ", nrow(edges_rural_f), " | Urban: ", nrow(edges_urban_f))
+
+```
+### ============================= Nodes & export =============================
+```{r}
+make_nodes <- function(edges_df) {
+  if (nrow(edges_df)==0) return(tibble(name=character(), Domain=character()))
+  nodes <- unique(c(edges_df$Genus_1, edges_df$Genus_2))
+  tibble(name = nodes) %>% left_join(genus_domain_map, by = c("name"="Genus"))
+}
+
+write_net <- function(edges, nodes, tag) {
+  if (nrow(edges) == 0) { message("No edges for ", tag); return(invisible(NULL)) }
+  write.table(edges %>% transmute(Source = Genus_1, interaction = "corr", Target = Genus_2),
+              paste0("network_", tag, ".sif"),
+              sep = "\t", quote = FALSE, row.names = FALSE, col.names = FALSE)
+  write.table(edges %>% transmute(Source = Genus_1, Target = Genus_2, Relation,
+                                  rho_mean, CI_lower, CI_upper, p, q, sign_consistency),
+              paste0("edges_",   tag, ".txt"),
+              sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
+  write.table(nodes %>% mutate(name = gsub(" ", "_", name)) %>% select(name, Domain),
+              paste0("nodes_",   tag, ".txt"),
+              sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
+}
+
+nodes_rural <- make_nodes(edges_rural_f)
+nodes_urban <- make_nodes(edges_urban_f)
+
+write_net(edges_rural_f, nodes_rural, "rural_BE_genus_tight")
+write_net(edges_urban_f, nodes_urban, "urban_BE_genus_tight")
+
+message("Ready. BE networks VERY tight (domain-normalized, strong CI, co-occurrence, sign-consistent).")
+
+
+
+```
 
 
 
