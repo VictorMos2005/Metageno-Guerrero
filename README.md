@@ -25,6 +25,7 @@ Figures
 
 - [Alpha and beta diversity of Rural and Urban metagenomes.](#alpha-and-beta-diversity-of-rural-and-urban-metagenomes)
 - [Differentially abundant bacterial and eukaryotic taxa between Rural and Urban groups](#differentially-abundant-bacterial-and-eukaryotic-taxa-between-rural-and-urban-groups)
+- [Mean relative abundance of the most prevalent bacterial and eukaryotic genera in rural and urban samples.](mean-relative-abundance-of-the-most-prevalent-bacterial-and-eukaryotic-genera-in-rural-and-urban-samples.)
 
 ---
 
@@ -2140,4 +2141,434 @@ final_fig5 <- plot_boxbactpred / (p_euk_sel+ theme(legend.position = "none")) +
   )
 
 final_fig5
+```
+## Mean relative abundance of the most prevalent bacterial and eukaryotic genera in rural and urban samples.
+
+### Graph boxplots of EUKARYOTA
+```{r}
+ 
+ 
+ rm(list = ls(envir = .GlobalEnv), envir = .GlobalEnv); invisible(gc())
+ 
+ suppressPackageStartupMessages({
+   library(dplyr); library(tidyr); library(ggplot2); library(scales)
+ })
+ 
+ 
+```
+### --- 1. Upload and clean the data---
+```{r}
+ kaiju_merged <- read.csv(
+   file = "/home/alumno21/axel/files/kaiju_merged_final.csv",
+   header = TRUE,
+   sep = ",",
+   fileEncoding = "latin1",
+   stringsAsFactors = FALSE,
+   na.strings = c("", "NA")
+ )
+ 
+```
+### --- Urban and Rural list adapted with the suffix "_kaiju.out" ---
+```{r}
+ urban_files_kaiju <- paste0(c("37082_2 # 1", "37082_1#20", "37082_1#27", "37035_2#13", "37035_1#29",
+                               "37082_2 # 14", "37035_2#12", "37035_2#6", "37082_1#17", "37035_2#14",
+                               "37082_1 # 26", "37035_1#30", "37035_1#32", "37082_1#15", "37082_2#15",
+                              "37082_1 # 13", "37035_2#10", "37082_1#31", "37035_2#17", "37035_2#8",
+                               "37035_2 # 23", "37035_2#31", "37035_2#24", "37082_2#5", "36703_3#5",
+                               "37082_1 # 10", "36703_3#7", "37082_2#9", "37082_2#3", "37035_2#2",
+                               "37035_2 # 3", "37035_2#19", "37035_2#21", "36703_3#1", "37082_1#24",
+                               "36703_3 # 2", "37035_2#4", "37035_2#15", "37035_2#18", "37035_2#28",
+                               "37082_2 # 13", "37082_1#22", "37082_1#29", "37082_1#19", "37035_2#30",
+                               "37082_1 # 16", "37035_1#31", "37035_2#7", "37082_1#30", "37035_2#16",
+                               "37082_2 # 11", "37082_1#14", "37035_2#5", "37082_2#4", "37082_1#18",
+                               "37035_2 # 1", "37082_1#23", "37082_2#12", "37082_1#11", "37082_1#12",
+                               "37035_2 # 11", "37035_2#25", "37082_1#32", "37082_1#9", "37035_2#29",
+                               "37082_1 # 21", "37082_2#2", "37035_2#27", "36703_3#3", "37082_2#6",
+                               "37035_2 # 20", "37082_2#7", "37082_2#8", "37082_2#10", "37082_1#28",
+                               "36703_3 # 10", "37035_2#9", "37082_1#25", "36703_3#8", "36703_3#9",
+                               "37035_2 # 26", "36703_3#6", "37035_2#32", "36703_3#4", "37035_2#22"),
+                             "_kaiju.out")
+ 
+ rural_files_kaiju <- paste0(c("37082_3 # 17", "37082_3#15", "37035_1#22", "36703_3#31", "37082_2#24",
+                               "36703_3 # 26", "37035_7#10", "36703_3#21", "37082_2#22", "37035_7#2",
+                               "37082_3 # 7", "37035_7#6", "37035_1#7", "37035_7#9", "37082_2#30",
+                               "37035_1 # 18", "37035_7#4", "37082_3#13", "37082_3#32", "37035_1#8",
+                               "37035_7 # 7", "37035_1#19", "37082_3#29", "37035_7#13", "37035_7#12",
+                               "37082_2 # 16", "36703_3#25", "37082_3#27", "37082_3#5", "37082_3#21",
+                               "37082_2 # 19", "37082_3#16", "37035_1#5", "37082_3#1", "37035_7#11",
+                               "37035_7 # 5", "36703_3#13", "37035_7#14", "37035_1#1", "37082_3#11",
+                               "37035_1 # 10", "37035_1#12", "37082_3#4", "36703_3#17", "36703_3#27",
+                               "37082_3 # 19", "37082_2#18", "36703_3#29", "36703_3#12", "36703_3#32",
+                               "37035_1 # 15", "37035_1#27", "37035_1#13", "37035_7#8", "37035_1#6",
+                               "37082_3 # 24", "36703_3#30", "37035_7#1", "37035_1#16", "37035_7#15",
+                               "37082_3 # 26", "37035_1#23", "37035_1#2", "37082_2#27", "37035_7#3",
+                               "37082_2 # 20", "36703_3#16", "37082_3#8", "37035_1#25", "36703_3#14",
+                               "37082_3 # 3", "37035_1#4", "37082_2#29", "37082_3#30", "37082_2#31",
+                               "37035_7 # 22", "37035_7#16", "37082_2#17", "36703_3#18", "37035_1#11",
+                               "37035_1 # 3", "37035_1#14", "37082_3#9", "36703_3#23", "37082_2#28",
+                               "37082_2 # 21", "37082_3#31", "36703_3#20", "37082_2#25", "36703_3#19",
+                               "37082_2 # 26", "37082_3#6", "37035_1#17", "37082_2#23", "36703_3#15",
+                               "36703_3 # 28", "37082_3#12", "37082_2#32", "37082_3#10", "36703_3#22",
+                               "37082_3 # 28", "36703_3#24", "37082_3#18", "37082_3#20", "37035_1#24",
+                               "37082_3 # 23", "37082_3#2", "37035_1#20", "37082_3#22", "37082_3#25",
+                               "37082_3 # 14", "37035_1#9", "36703_3#11", "37035_1#21", "37035_7#20",
+                               "37035_7 # 17", "37035_7#21", "37035_7#19", "37035_1#26", "37035_7#24",
+                               "37035_7 # 18", "37035_7#23", "37035_7#25"),
+                             "_kaiju.out")
+ 
+```
+### --- Asignar correctamente file_base y Group ---
+```{r}
+ kaiju_merged <- kaiju_merged %>%
+   mutate(
+     file_base = paste0(gsub("\\.out$", "", basename(file)), "_kaiju.out"),
+     Group = case_when(
+       file_base %in% urban_files_kaiju ~ "Urban",
+       file_base %in% rural_files_kaiju ~ "Rural",
+       TRUE ~ NA_character_
+     )
+   ) %>%
+   filter(!is.na(Group))
+ 
+ 
+```
+### --- Selected taxa (level Genus) ---
+```{r}
+ target_taxa <- c("Agaricales", "Chorda", "Eimeriidae", "Halteriidae", "Saccharomycetales")
+ 
+```
+### --- Totals per sample (denominator): total of Eukaryota EXCLUDING Chordata ---
+```{r}
+ totals_sample <- kaiju_merged %>%
+   filter(Domain == "Eukaryota",
+          is.na(Phylum) | !grepl("^Chordata$", Phylum, ignore.case = TRUE)) %>%
+   group_by(file_base, Group) %>%
+   summarise(total_reads = sum(reads, na.rm = TRUE), .groups = "drop")
+ 
+```
+### --- Reads of the selected taxa (Genus), also EXCLUDING Chordata ---
+```{r}
+ sel_reads <- kaiju_merged %>%
+   filter(Domain == "Eukaryota",
+          is.na(Phylum) | !grepl("^Chordata$", Phylum, ignore.case = TRUE),
+          !is.na(Genus), Genus != "", Genus != "Unclassified",
+          Genus %in% target_taxa) %>%
+   group_by(file_base, Group, Genus) %>%
+   summarise(reads = sum(reads, na.rm = TRUE), .groups = "drop") %>%
+   complete(file_base, Group, Genus = target_taxa, fill = list(reads = 0)) %>%
+   left_join(totals_sample, by = c("file_base","Group")) %>%
+   mutate(pct = if_else(total_reads > 0, 100 * reads / total_reads, NA_real_))
+ 
+```
+### Maintain the order of the taxons
+```{r}
+ sel_reads$Genus <- factor(sel_reads$Genus, levels = target_taxa)
+ 
+```
+### --- Promedio de % por grupo (para las barras) ---
+```{r}
+ group_avg <- sel_reads %>%
+   group_by(Group, Genus) %>%
+   summarise(mean_pct = mean(pct, na.rm = TRUE), .groups = "drop")
+ 
+```
+### ====================== Wilcoxon by Genus ======================
+```{r}
+ get_pval_per_genus <- function(df) {
+   df <- df %>% filter(!is.na(pct))
+   if (n_distinct(df$Group) < 2) return(NA_real_)
+   tryCatch(wilcox.test(pct ~ Group, data = df)$p.value, error = function(e) NA_real_)
+ }
+ 
+ wilcox_res <- sel_reads %>%
+   group_by(Genus) %>%
+   summarise(p = get_pval_per_genus(cur_data()), .groups = "drop") %>%
+   mutate(stars = case_when(
+     is.na(p)  ~ "",
+     p <= 1e-4 ~ "****",
+     p <= 1e-3 ~ "***",
+     p <= 0.01 ~ "**",
+     p <= 0.05 ~ "*",
+     TRUE      ~ ""
+   ))
+ 
+```
+### ---- Altura para estrellas/brackets (con padding) ----
+```{r}
+ overall_max <- max(group_avg$mean_pct, na.rm = TRUE)
+ y_pad <- overall_max * 0.06
+ 
+ anno_y <- group_avg %>%
+   group_by(Genus) %>%
+   summarise(ypos = max(mean_pct, na.rm = TRUE) + y_pad, .groups = "drop")
+ 
+ anno_df <- wilcox_res %>%
+   left_join(anno_y, by = "Genus") %>%
+   filter(stars != "")
+ 
+```
+### --- Palette for Group ---
+```{r}
+ pal_group <- c(Rural = " # E9B44C", Urban = "#4F86C6")
+ 
+```
+### ---------- Tema ----------
+```{r}
+ base_theme <- theme_minimal(base_size = 11) +
+   theme(
+     panel.grid.major = element_blank(),
+     panel.grid.minor = element_blank(),
+     axis.line.x.bottom = element_line(),
+     axis.line.y.left  = element_line(),
+     strip.text.x = element_text(hjust = 0.5, size = 9),
+     plot.title = element_text(hjust = 0, size = 14, face = "plain",
+                               margin = margin(t = 8, b = 6)),
+     plot.margin = margin(15, 12, 12, 12)
+   )
+ 
+```
+### ---------- Data for BRACKETS drawn by hand ----------
+### Numerical position of the genus in the x axis
+```{r}
+ lvl <- levels(group_avg$Genus)
+ brackets_manual <- anno_df %>%
+   mutate(
+     gx = match(Genus, lvl),
+```
+### Horizontal offset: center above the bars (adjust if width/dodge is changed)
+```{r}
+     off = 0.23, # ~ Half of the space between the two bars
+     x_rural = gx - off,
+     x_urban = gx + off,
+     y = ypos
+   )
+ 
+```
+### --- Gráfico final con BRACKETS + estrellas ---
+```{r}
+ p_sep <- ggplot(group_avg, aes(x = Genus, y = mean_pct, fill = Group)) +
+  geom_col(position = position_dodge(width = 0.8),
+            width = 0.7, color = "black", linewidth = 0.2) +
+```
+### % labels
+```{r}
+   geom_text(aes(label = sprintf("%.3f%%", mean_pct)),
+             position = position_dodge(width = 0.8),
+             vjust = -0.3, size = 3, color = "black") +
+```
+### Horizontal BRACKET (30% higher)
+```{r}
+   geom_segment(data = brackets_manual,
+                aes(x = x_rural, xend = x_urban,
+                    y = y * 1.7, yend = y * 1.7),
+               inherit.aes = FALSE, linewidth = 0.6) +
+```
+### Bracket legs (2% below the new level)
+```{r}
+   geom_segment(data = brackets_manual,
+                aes(x = x_rural, xend = x_rural,
+                    y = y * 1.7, yend = y * 1.7 - (y * 1.7 * 0.02)),
+               inherit.aes = FALSE, linewidth = 0.6) +
+   geom_segment(data = brackets_manual,
+                aes(x = x_urban, xend = x_urban,
+                    y = y * 1.7, yend = y * 1.7 - (y * 1.7 * 0.02)),
+                inherit.aes = FALSE, linewidth = 0.6) +
+```
+### Stars (also in the new level)
+```{r}
+   geom_text(data = brackets_manual,
+             aes(x = gx, y = y * 1.7, label = stars),
+             inherit.aes = FALSE, vjust = -0.2, size = 5) +
+   scale_fill_manual(values = pal_group) +
+   scale_y_continuous(
+     labels = label_percent(scale = 1, accuracy = 0.1),
+     expand = expansion(mult = c(0, 0.30)) # Superior air for brackets/stars
+   ) +
+   labs(
+     title = "Mean relative abundance per sample of the most prevalent eukaryotic taxa",
+     x = "Genus", y = "Mean per sample"
+   ) +
+   base_theme
+
+```
+### Corrected graph
+```{r}
+ print(p_sep)
+ 
+ 
+ 
+ suppressPackageStartupMessages({
+   library(dplyr); library(tidyr); library(ggplot2); library(scales)
+ })
+ 
+```
+### --- Géneros seleccionados (Domain = Bacteria) ---
+```{r}
+ target_genera <- c("Clostridium", "Faecalibacterium", "Ruminococcus", "Prevotella", "Streptococcus")
+ 
+```
+### --- Totals per sample: total of Bacteria per sample ---
+```{r}
+ totals_sample <- kaiju_merged %>%
+   filter(Domain == "Bacteria") %>%
+   group_by(file_base, Group) %>%
+   summarise(total_reads = sum(reads, na.rm = TRUE), .groups = "drop")
+ 
+```
+### --- Reads of the selected genus ---
+```{r}
+ sel_reads <- kaiju_merged %>%
+   filter(Domain == "Bacteria",
+          !is.na(Genus), Genus != "", Genus != "Unclassified",
+          Genus %in% target_genera) %>%
+   group_by(file_base, Group, Genus) %>%
+   summarise(reads = sum(reads, na.rm = TRUE), .groups = "drop") %>%
+   complete(file_base, Group, Genus = target_genera, fill = list(reads = 0)) %>%
+   left_join(totals_sample, by = c("file_base","Group")) %>%
+   mutate(pct = if_else(total_reads > 0, 100 * reads / total_reads, NA_real_))
+ 
+```
+### Order of genus on the x axis
+```{r}
+ sel_reads$Genus <- factor(sel_reads$Genus, levels = target_genera)
+ 
+```
+### --- Promedio por grupo (para las barras) ---
+```{r}
+ group_avg <- sel_reads %>%
+   group_by(Group, Genus) %>%
+   summarise(mean_pct = mean(pct, na.rm = TRUE), .groups = "drop")
+ 
+```
+### ====================== Wilcoxon by Genus ======================
+```{r}
+ get_pval_per_genus <- function(df) {
+   df <- df %>% filter(!is.na(pct))
+   if (n_distinct(df$Group) < 2) return(NA_real_)
+   tryCatch(wilcox.test(pct ~ Group, data = df)$p.value, error = function(e) NA_real_)
+ }
+ 
+ wilcox_res <- sel_reads %>%
+   group_by(Genus) %>%
+   summarise(p = get_pval_per_genus(cur_data()), .groups = "drop") %>%
+   mutate(stars = case_when(
+     is.na(p)  ~ "",
+     p <= 1e-4 ~ "****",
+     p <= 1e-3 ~ "***",
+     p <= 0.01 ~ "**",
+     p <= 0.05 ~ "*",
+     TRUE      ~ ""
+   ))
+
+```
+### ---- Altura para estrellas/brackets (con padding) ----
+```{r}
+ overall_max <- max(group_avg$mean_pct, na.rm = TRUE)
+ y_pad <- overall_max * 0.06
+ 
+ anno_y <- group_avg %>%
+   group_by(Genus) %>%
+   summarise(ypos = max(mean_pct, na.rm = TRUE) + y_pad, .groups = "drop")
+ 
+ anno_df <- wilcox_res %>%
+   left_join(anno_y, by = "Genus") %>%
+   filter(stars != "")
+ 
+```
+### --- Colores por Group (consistentes) ---
+```{r}
+ pal_group <- c(Rural = " # E9B44C", Urban = "#4F86C6")
+ 
+```
+### ---------- Tema ----------
+```{r}
+ base_theme <- theme_minimal(base_size = 11) +
+   theme(
+     panel.grid.major = element_blank(),
+     panel.grid.minor = element_blank(),
+     axis.line.x.bottom = element_line(),
+     axis.line.y.left  = element_line(),
+     strip.text.x = element_text(hjust = 0.5, size = 9),
+     plot.title = element_text(hjust = 0, size = 14, face = "plain",
+                               margin = margin(t = 8, b = 6)),
+     plot.margin = margin(15, 12, 12, 12)
+   )
+ 
+```
+### ---------- Data for BRACKETS drawn by hand ----------
+```{r}
+ lvl <- levels(group_avg$Genus)
+ brackets_manual <- anno_df %>%
+   mutate(
+     gx  = match(Genus, lvl), # Numerical position of the genus on x
+     off = 0.23, # Horizontal separation to each bar (adjust if width/dodge changes)
+     x_rural = gx - off,
+     x_urban = gx + off,
+     y = ypos
+   )
+```
+### --- Gráfico final (barras en paralelo + brackets + estrellas) ---
+```{r}
+ p_sep2 <- ggplot(group_avg, aes(x = Genus, y = mean_pct, fill = Group)) +
+   geom_col(position = position_dodge(width = 0.8),
+            width = 0.7, color = "black", linewidth = 0.2) +
+   geom_text(aes(label = sprintf("%.3f%%", mean_pct)),
+             position = position_dodge(width = 0.8),
+             vjust = -0.3, size = 3, color = "black") +
+```
+### Horizontal BRACKET (30% higher)
+```{r}
+   geom_segment(data = brackets_manual,
+                aes(x = x_rural, xend = x_urban,
+                    y = y * 1.6, yend = y * 1.6),
+                inherit.aes = FALSE, linewidth = 0.6) +
+```
+### Bracket legs (2% below the new level)
+```{r}
+   geom_segment(data = brackets_manual,
+                aes(x = x_rural, xend = x_rural,
+                    y = y * 1.6, yend = y * 1.6 - (y * 1.6 * 0.02)),
+                inherit.aes = FALSE, linewidth = 0.6) +
+   geom_segment(data = brackets_manual,
+                aes(x = x_urban, xend = x_urban,
+                    y = y * 1.6, yend = y * 1.6 - (y * 1.6 * 0.02)),
+                inherit.aes = FALSE, linewidth = 0.6) +
+```
+### Stars (also in the new level)
+```{r}
+   geom_text(data = brackets_manual,
+             aes(x = gx, y = y * 1.6, label = stars),
+             inherit.aes = FALSE, vjust = -0.2, size = 5) +
+   scale_fill_manual(values = pal_group, name = "Group") +
+   scale_y_continuous(
+     labels = label_percent(scale = 1, accuracy = 0.1),
+     expand = expansion(mult = c(0, 0.30)) # Air for brackets/stars
+   ) +
+   labs(
+     title = "Mean relative abundance per group of the most prevalent bacterial taxa",
+     x = "Genus", y = "Mean per sample"
+   ) +
+   base_theme
+ print(p_sep2)
+ 
+ 
+ 
+ p_sep2 <- p_sep2 + theme(legend.position = "none") # Hide the legend from the top part
+ 
+ 
+```
+### Graph both boxplots for EUK and BACT
+```{r}
+ 
+ final_fig <- (p_sep2 + labs(title = NULL)) /
+   (p_sep  + labs(title = NULL)) +
+   plot_layout(guides = "collect") +
+   plot_annotation(tag_levels = "A") & # ← Add letters A, B...
+   theme(
+     legend.position = "right",
+     plot.tag = element_text(size = 14, face = "plain")
+   )
+ 
+ final_fig
+ 
 ```
