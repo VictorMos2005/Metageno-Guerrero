@@ -5465,7 +5465,7 @@ plot_cog_groupbars_style <- function(perfile_df, focus_taxon,
   df <- perfile_df %>% dplyr::filter(Focus_taxon == !!focus_taxon)
   
 ```
-### choose top COGs by overall mean
+### Choose top COGs by overall mean
 ```{r}
   top_cogs <- df %>%
     dplyr::group_by(COG_primary) %>%
@@ -5476,7 +5476,7 @@ plot_cog_groupbars_style <- function(perfile_df, focus_taxon,
   df <- df %>% dplyr::filter(COG_primary %in% top_cogs)
   
 ```
-### group means (%)
+### Group means (%)
 ```{r}
   group_avg <- df %>%
     dplyr::group_by(Grupo, COG_primary) %>%
@@ -5520,7 +5520,7 @@ plot_cog_groupbars_style <- function(perfile_df, focus_taxon,
   tests_sig <- tests %>% dplyr::filter(stars != "", abs(delta) >= 100*min_diff)
   
 ```
-### keep only significant COGs if requested
+### Keep only significant COGs if requested
 ```{r}
   if (sig_only) {
     if (nrow(tests_sig) == 0) {
@@ -5548,14 +5548,14 @@ plot_cog_groupbars_style <- function(perfile_df, focus_taxon,
     dplyr::mutate(COG_lab = forcats::fct_drop(COG_lab))
   
 ```
-### y-posición del bracket: un poco arriba de la barra más alta de cada COG
+### Y-position of the bracket: a little bit higher than the highest barr of each COG
 ```{r}
   anno_y <- group_avg %>%
     dplyr::group_by(COG_lab) %>%
     dplyr::summarise(y = max(mean_pct, na.rm = TRUE) * 1.10, .groups = "drop")
   
 ```
-### mapa de posiciones reales en x para lo que SÍ se dibuja
+###  Map of the real positions in x for what has to be drawn
 ```{r}
   x_map <- group_avg %>%
     dplyr::distinct(COG_lab) %>%
@@ -5566,7 +5566,7 @@ plot_cog_groupbars_style <- function(perfile_df, focus_taxon,
                   x_urban = gx + off)
   
 ```
-### brackets + estrellas usando el mapa de posiciones reales
+### Brackets + stars using the map of real positions
 ```{r}
   brackets_manual <- tests %>%
     dplyr::mutate(
@@ -5671,7 +5671,4 @@ euk_combined  <- wrap_plots(euk_plots,  nrow = 1, guides = "collect") &
 ```{r}
 bact_combined
 ```
-### euk_combined no significant data
-```{r}
-
-```
+##### euk_combined no significant data
