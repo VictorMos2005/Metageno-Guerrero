@@ -3806,9 +3806,7 @@ message("\nListo. Archivos generados:\n - ", OUT_PREFIX, "_Bacteria_stats.tsv",
 ## BUSCO completeness assessment of MAGs
 
 #### For the comprehension of the specific demographic signatures, we recovered 713 MAGs in total by focusing on the 10 highest-read individuals for each of the ten differential lineages identified previously, five bacterial and five eukaryotic taxa (Fig. 10). Rural and Urban cohorts contributed roughly equal shares of these genomes (Fig. 10A–B). Across MAGs, single-copy BUSCOs dominated the profiles, whereas duplicated, fragmented, and missing categories formed minor fractions, yielding near-identical distributions between lifestyles (Fig. 10A vs. 10B).
-```{r}
 
-```
 ### Summary figure of MAGs
 ### We need the BUSCO file "tabla_busco.csv"
 ```{r}
