@@ -5441,9 +5441,7 @@ if (!exists("cog_labels")) {
 ### ===============================
 ### Main plot: grouped bars + brackets + stars (no SE, no q)
 ### ===============================
-```{r}
 
-```
 ### ---- Build per-file compositions (reusable) ----
 ```{r}
 per_file_cog <- function(focus_long_df) {
