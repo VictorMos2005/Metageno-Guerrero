@@ -32,6 +32,10 @@ Figures
   - [BMI<25 vs BMI≥25](#bmi)
   - [BMI≥25 Rural vs BMI≥25 Urban](#bmiru)
   - [BUSCO completeness assessment of MAGs](#busco-completeness-assessment-of-mags)
+  - [Functional annotation profiles of high-quality MAGs](#fun-anno)
+      - [Part A](#part-a)
+      - [Part B](#part-b)
+      - [Part C](#part-c)
 
 ---
 
@@ -3978,4 +3982,694 @@ combined_busco_plot <- plot_rural + plot_urban +
 ### Final BUSCO table wit colors
 ```{r}
 combined_busco_plot
+```
+
+<a id="fun-anno"></a>
+## Functional annotation profiles of high-quality MAGs
+### (>95% completeness) from Rural and Urban groups.
+
+## Part A
+### We need the functional annotations file "all_annotations_trimmed.csv"
+```{r}
+
+```
+### --- Libraries ---
+```{r}
+library(dplyr)
+library(ggplot2)
+library(scales) # Para percent_format()
+
+```
+### --- Load data ---
+```{r}
+anot <- read.csv("/home/alumno21/axel/files/all_annotations_trimmed.csv",
+                 sep = ",", stringsAsFactors = FALSE)
+
+```
+### --- Define files by group ---
+```{r}
+urban_files <- c("37082_2 # 1", "37082_1#20", "37082_1#27", "37035_2#13", "37035_1#29",
+                 "37082_2 # 14", "37035_2#12", "37035_2#6", "37082_1#17", "37035_2#14",
+                 "37082_1 # 26", "37035_1#30", "37035_1#32", "37082_1#15", "37082_2#15",
+                 "37082_1 # 13", "37035_2#10", "37082_1#31", "37035_2#17", "37035_2#8",
+                 "37035_2 # 23", "37035_2#31", "37035_2#24", "37082_2#5", "36703_3#5",
+                 "37082_1 # 10", "36703_3#7", "37082_2#9", "37082_2#3", "37035_2#2",
+                 "37035_2 # 3", "37035_2#19", "37035_2#21", "36703_3#1", "37082_1#24",
+                 "36703_3 # 2", "37035_2#4", "37035_2#15", "37035_2#18", "37035_2#28",
+                 "37082_2 # 13", "37082_1#22", "37082_1#29", "37082_1#19", "37035_2#30",
+                 "37082_1 # 16", "37035_1#31", "37035_2#7", "37082_1#30", "37035_2#16",
+                 "37082_2 # 11", "37082_1#14", "37035_2#5", "37082_2#4", "37082_1#18",
+                 "37035_2 # 1", "37082_1#23", "37082_2#12", "37082_1#11", "37082_1#12",
+                 "37035_2 # 11", "37035_2#25", "37082_1#32", "37082_1#9", "37035_2#29",
+                 "37082_1 # 21", "37082_2#2", "37035_2#27", "36703_3#3", "37082_2#6",
+                 "37035_2 # 20", "37082_2#7", "37082_2#8", "37082_2#10", "37082_1#28",
+                 "36703_3 # 10", "37035_2#9", "37082_1#25", "36703_3#8", "36703_3#9",
+                 "37035_2 # 26", "36703_3#6", "37035_2#32", "36703_3#4", "37035_2#22")
+rural_files <- c("37082_3 # 17", "37082_3#15", "37035_1#22", "36703_3#31", "37082_2#24",
+                 "36703_3 # 26", "37035_7#10", "36703_3#21", "37082_2#22", "37035_7#2",
+                 "37082_3 # 7", "37035_7#6", "37035_1#7", "37035_7#9", "37082_2#30",
+                 "37035_1 # 18", "37035_7#4", "37082_3#13", "37082_3#32", "37035_1#8",
+                 "37035_7 # 7", "37035_1#19", "37082_3#29", "37035_7#13", "37035_7#12",
+                 "37082_2 # 16", "36703_3#25", "37082_3#27", "37082_3#5", "37082_3#21",
+                 "37082_2 # 19", "37082_3#16", "37035_1#5", "37082_3#1", "37035_7#11",
+                 "37035_7 # 5", "36703_3#13", "37035_7#14", "37035_1#1", "37082_3#11",
+                 "37035_1 # 10", "37035_1#12", "37082_3#4", "36703_3#17", "36703_3#27",
+                 "37082_3 # 19", "37082_2#18", "36703_3#29", "36703_3#12", "36703_3#32",
+                 "37035_1 # 15", "37035_1#27", "37035_1#13", "37035_7#8", "37035_1#6",
+                 "37082_3 # 24", "36703_3#30", "37035_7#1", "37035_1#16", "37035_7#15",
+                 "37082_3 # 26", "37035_1#23", "37035_1#2", "37082_2#27", "37035_7#3",
+                 "37082_2 # 20", "36703_3#16", "37082_3#8", "37035_1#25", "36703_3#14",
+                 "37082_3 # 3", "37035_1#4", "37082_2#29", "37082_3#30", "37082_2#31",
+                 "37035_7 # 22", "37035_7#16", "37082_2#17", "36703_3#18", "37035_1#11",
+                 "37035_1 # 3", "37035_1#14", "37082_3#9", "36703_3#23", "37082_2#28",
+                 "37082_2 # 21", "37082_3#31", "36703_3#20", "37082_2#25", "36703_3#19",
+                 "37082_2 # 26", "37082_3#6", "37035_1#17", "37082_2#23", "36703_3#15",
+                 "36703_3 # 28", "37082_3#12", "37082_2#32", "37082_3#10", "36703_3#22",
+                 "37082_3 # 28", "36703_3#24", "37082_3#18", "37082_3#20", "37035_1#24",
+                 "37082_3 # 23", "37082_3#2", "37035_1#20", "37082_3#22", "37082_3#25",
+                 "37082_3 # 14", "37035_1#9", "36703_3#11", "37035_1#21", "37035_7#20",
+                 "37035_7 # 17", "37035_7#21", "37035_7#19", "37035_1#26", "37035_7#24",
+                 "37035_7 # 18", "37035_7#23", "37035_7#25")
+
+```
+### --- Function to classify simplified domain ---
+```{r}
+assign_domain <- function(term) {
+  term_lower <- tolower(term)
+  if (grepl("virus|myoviridae|caudovirales|podoviridae|siphoviridae|ssdna|dsdna", term_lower)) {
+    return("Viral")
+  } else if (grepl("bacteria", term_lower)) {
+    return("Bacteria")
+  } else if (grepl("archaea", term_lower)) {
+    return("Archaea")
+  } else if (grepl("eukaryota", term_lower)) {
+    return("Eukaryota")
+  } else if (term_lower == "root") {
+    return("Other")
+  } else {
+    return("Other")
+  }
+}
+
+```
+### --- Step 1: Prepare data ---
+```{r}
+anot <- anot %>%
+  filter(grepl("\\|", max_annot_lvl)) %>%
+  mutate(
+    max_annot_lvl_clean = sub(".*\\|", "", max_annot_lvl),
+    Domain_simplified = sapply(max_annot_lvl_clean, assign_domain),
+    Grupo = case_when(
+      File %in% rural_files ~ "Rural",
+      File %in% urban_files ~ "Urban",
+      TRUE ~ NA_character_
+    )
+  ) %>%
+  filter(!is.na(Grupo))
+
+```
+### --- Step 2: Relative abundance per MAG ---
+```{r}
+score_total_por_file <- anot %>%
+  group_by(File) %>%
+  summarise(score_total = sum(score, na.rm = TRUE), .groups = "drop")
+
+score_por_file_nivel <- anot %>%
+  group_by(File, max_annot_lvl_clean, Domain_simplified) %>%
+  summarise(score_nivel = sum(score, na.rm = TRUE), .groups = "drop")
+
+abundancia_relativa <- score_por_file_nivel %>%
+  left_join(score_total_por_file, by = "File") %>%
+  mutate(abund_rel = score_nivel / score_total) %>%
+  left_join(anot %>% select(File, Grupo) %>% distinct(), by = "File") %>%
+  filter(!is.na(abund_rel))
+
+```
+### --- Step 3: Average by group and domain ---
+```{r}
+abundancia_promedio <- abundancia_relativa %>%
+  group_by(Grupo, Domain_simplified) %>%
+  summarise(promedio_abund = mean(abund_rel), .groups = "drop")
+
+```
+### --- Step 4: Count unique MAGs per group ---
+```{r}
+n_mags_por_grupo <- anot %>%
+  select(Grupo, MAG) %>%
+  distinct() %>%
+  group_by(Grupo) %>%
+  summarise(n_MAGs = n(), .groups = "drop")
+```
+### --- Extra Step 4: Count annotated genes/ORFs per group ---
+```{r}
+n_genes_por_grupo <- anot %>%
+  group_by(Grupo) %>%
+  summarise(n_genes = n(), .groups = "drop")
+
+
+```
+### --- Step 5: Count unique microorganisms per group ---
+```{r}
+n_microbes_por_grupo <- anot %>%
+  select(Grupo, max_annot_lvl_clean) %>%
+  distinct() %>%
+  group_by(Grupo) %>%
+  summarise(n_microbes = n(), .groups = "drop")
+
+```
+### --- Required libraries ---
+```{r}
+library(ggplot2)
+library(dplyr)
+library(scales)
+library(patchwork)
+library(RColorBrewer)
+
+
+```
+### --- Step 6: Text of annotated genes/ORFs per group ---
+```{r}
+texto_genes <- paste0(
+  "Annotated genes (Rural: ", n_genes_por_grupo$n_genes[n_genes_por_grupo$Grupo == "Rural"],
+  " | Urban: ", n_genes_por_grupo$n_genes[n_genes_por_grupo$Grupo == "Urban"],")"
+)
+
+```
+### --- Step 7: Percentages in legend ---
+```{r}
+porcentaje_por_dominio <- abundancia_promedio %>%
+  group_by(Domain_simplified) %>%
+  summarise(total_abund = sum(promedio_abund), .groups = "drop") %>%
+  mutate(label = paste0(Domain_simplified, " (", percent(total_abund / sum(total_abund)), ")"))
+
+labels_legend <- porcentaje_por_dominio$label
+names(labels_legend) <- porcentaje_por_dominio$Domain_simplified
+
+```
+### --- Step 8: Bar plot ---
+```{r}
+plot_abundancia <- ggplot(abundancia_promedio, aes(x = Grupo, y = promedio_abund, fill = Domain_simplified)) +
+  geom_bar(stat = "identity", position = "fill") +
+  scale_y_continuous(labels = percent_format()) +
+  scale_fill_manual(
+    values = brewer.pal(n = length(labels_legend), name = "Set1"),
+    labels = labels_legend
+  ) +
+  labs(
+    title = "",
+    x = "Group",
+    y = "Relative abundance (%)",
+    fill = "Domain"
+  ) +
+  theme_classic(base_size = 12) +
+  theme(
+    legend.position = "right",
+    axis.text.x = element_text(size = 12),
+    axis.text.y = element_text(size = 12),
+    plot.title = element_text(size = 12, face = "plain", hjust = 0.5),
+    plot.margin = margin(t = 20, r = 20, b = 0, l = 20)
+  )
+
+```
+### --- Step 9: Text box below the plot ---
+```{r}
+plot_texto <- ggplot() +
+  annotate("text", x = 0.5, y = 0.5, label = texto_genes, size = 3, hjust = 0.5) +
+  theme_void()
+
+```
+### --- Step 10: Combine both with patchwork ---
+### plot_funanondoms <- plot_abundancia / plot_texto + plot_layout(heights = c(10, 1))
+```{r}
+plot_funanondoms <- plot_abundancia 
+
+```
+### Mostrar el resultado
+```{r}
+
+```
+### This
+```{r}
+plot_funanondoms
+
+
+```
+## Part B
+
+### --- Libraries ---
+```{r}
+library(dplyr)
+library(ggplot2)
+library(scales)
+library(patchwork)
+library(RColorBrewer)
+library(taxize)
+
+```
+### --- Configure Entrez API Key for taxize ---
+```{r}
+Sys.setenv(ENTREZ_KEY = "99c57399ef66d8906cbc244b43bbf0239008")
+
+```
+### --- Load data ---
+```{r}
+anot <- read.csv("/home/alumno21/axel/files/all_annotations_trimmed.csv",
+                 sep = ",", stringsAsFactors = FALSE)
+
+```
+### --- Define files by group ---
+```{r}
+urban_files <- c("37082_2 # 1", "37082_1#20", "37082_1#27", "37035_2#13", "37035_1#29",
+                 "37082_2 # 14", "37035_2#12", "37035_2#6", "37082_1#17", "37035_2#14",
+                 "37082_1 # 26", "37035_1#30", "37035_1#32", "37082_1#15", "37082_2#15",
+                 "37082_1 # 13", "37035_2#10", "37082_1#31", "37035_2#17", "37035_2#8",
+                 "37035_2 # 23", "37035_2#31", "37035_2#24", "37082_2#5", "36703_3#5",
+                 "37082_1 # 10", "36703_3#7", "37082_2#9", "37082_2#3", "37035_2#2",
+                 "37035_2 # 3", "37035_2#19", "37035_2#21", "36703_3#1", "37082_1#24",
+                 "36703_3 # 2", "37035_2#4", "37035_2#15", "37035_2#18", "37035_2#28",
+                 "37082_2 # 13", "37082_1#22", "37082_1#29", "37082_1#19", "37035_2#30",
+                 "37082_1 # 16", "37035_1#31", "37035_2#7", "37082_1#30", "37035_2#16",
+                 "37082_2 # 11", "37082_1#14", "37035_2#5", "37082_2#4", "37082_1#18",
+                 "37035_2 # 1", "37082_1#23", "37082_2#12", "37082_1#11", "37082_1#12",
+                 "37035_2 # 11", "37035_2#25", "37082_1#32", "37082_1#9", "37035_2#29",
+                 "37082_1 # 21", "37082_2#2", "37035_2#27", "36703_3#3", "37082_2#6",
+                 "37035_2 # 20", "37082_2#7", "37082_2#8", "37082_2#10", "37082_1#28",
+                 "36703_3 # 10", "37035_2#9", "37082_1#25", "36703_3#8", "36703_3#9",
+                 "37035_2 # 26", "36703_3#6", "37035_2#32", "36703_3#4", "37035_2#22")
+rural_files <- c("37082_3 # 17", "37082_3#15", "37035_1#22", "36703_3#31", "37082_2#24",
+                 "36703_3 # 26", "37035_7#10", "36703_3#21", "37082_2#22", "37035_7#2",
+                 "37082_3 # 7", "37035_7#6", "37035_1#7", "37035_7#9", "37082_2#30",
+                 "37035_1 # 18", "37035_7#4", "37082_3#13", "37082_3#32", "37035_1#8",
+                 "37035_7 # 7", "37035_1#19", "37082_3#29", "37035_7#13", "37035_7#12",
+                 "37082_2 # 16", "36703_3#25", "37082_3#27", "37082_3#5", "37082_3#21",
+                 "37082_2 # 19", "37082_3#16", "37035_1#5", "37082_3#1", "37035_7#11",
+                 "37035_7 # 5", "36703_3#13", "37035_7#14", "37035_1#1", "37082_3#11",
+                 "37035_1 # 10", "37035_1#12", "37082_3#4", "36703_3#17", "36703_3#27",
+                 "37082_3 # 19", "37082_2#18", "36703_3#29", "36703_3#12", "36703_3#32",
+                 "37035_1 # 15", "37035_1#27", "37035_1#13", "37035_7#8", "37035_1#6",
+                 "37082_3 # 24", "36703_3#30", "37035_7#1", "37035_1#16", "37035_7#15",
+                 "37082_3 # 26", "37035_1#23", "37035_1#2", "37082_2#27", "37035_7#3",
+                 "37082_2 # 20", "36703_3#16", "37082_3#8", "37035_1#25", "36703_3#14",
+                 "37082_3 # 3", "37035_1#4", "37082_2#29", "37082_3#30", "37082_2#31",
+                 "37035_7 # 22", "37035_7#16", "37082_2#17", "36703_3#18", "37035_1#11",
+                 "37035_1 # 3", "37035_1#14", "37082_3#9", "36703_3#23", "37082_2#28",
+                 "37082_2 # 21", "37082_3#31", "36703_3#20", "37082_2#25", "36703_3#19",
+                 "37082_2 # 26", "37082_3#6", "37035_1#17", "37082_2#23", "36703_3#15",
+                 "36703_3 # 28", "37082_3#12", "37082_2#32", "37082_3#10", "36703_3#22",
+                 "37082_3 # 28", "36703_3#24", "37082_3#18", "37082_3#20", "37035_1#24",
+                 "37082_3 # 23", "37082_3#2", "37035_1#20", "37082_3#22", "37082_3#25",
+                 "37082_3 # 14", "37035_1#9", "36703_3#11", "37035_1#21", "37035_7#20",
+                 "37035_7 # 17", "37035_7#21", "37035_7#19", "37035_1#26", "37035_7#24",
+                 "37035_7 # 18", "37035_7#23", "37035_7#25")
+
+```
+### --- Function to classify simplified domain ---
+```{r}
+assign_domain <- function(term) {
+  term_lower <- tolower(term)
+  if (grepl("virus|myoviridae|caudovirales|podoviridae|siphoviridae|ssdna|dsdna", term_lower)) {
+    return("Viral")
+  } else if (grepl("bacteria", term_lower)) {
+    return("Bacteria")
+  } else if (grepl("archaea", term_lower)) {
+    return("Archaea")
+  } else if (grepl("eukaryota", term_lower)) {
+    return("Eukaryota")
+  } else if (term_lower == "root") {
+    return("Other")
+  } else {
+    return("Other")
+  }
+}
+
+```
+### --- Step 1: Prepare data ---
+```{r}
+anot <- anot %>%
+  filter(grepl("\\|", max_annot_lvl)) %>%
+  mutate(
+    max_annot_lvl_clean = sub(".*\\|", "", max_annot_lvl),
+    Domain_simplified = sapply(max_annot_lvl_clean, assign_domain),
+    Grupo = case_when(
+      File %in% rural_files ~ "Rural",
+      File %in% urban_files ~ "Urban",
+      TRUE ~ NA_character_
+    )
+  ) %>%
+  filter(!is.na(Grupo))
+
+```
+### --- Step 2: Filter only bacteria and clean Preferred_name ---
+```{r}
+anot_bacteria <- anot %>%
+  filter(Domain_simplified == "Bacteria") %>%
+  mutate(
+    Preferred_name_clean = ifelse(
+      grepl("\\|", Preferred_name),
+      sub(".*\\|", "", Preferred_name),
+      Preferred_name
+    )
+  ) %>%
+  filter(Preferred_name_clean != "")
+
+```
+### --- Step 3: Calculate relative abundance per file and Preferred_name_clean ---
+```{r}
+score_total_por_file_bact <- anot_bacteria %>%
+  group_by(File) %>%
+  summarise(score_total = sum(score, na.rm = TRUE), .groups = "drop")
+
+score_por_file_name <- anot_bacteria %>%
+  group_by(File, Preferred_name_clean) %>%
+  summarise(score_name = sum(score, na.rm = TRUE), .groups = "drop")
+
+abundancia_relativa_name <- score_por_file_name %>%
+  left_join(score_total_por_file_bact, by = "File") %>%
+  mutate(abund_rel = score_name / score_total) %>%
+  left_join(anot_bacteria %>% select(File, Grupo) %>% distinct(), by = "File") %>%
+  filter(!is.na(abund_rel), !is.na(Preferred_name_clean))
+
+```
+### --- Step 4: Average abundance by group and Preferred_name_clean ---
+```{r}
+abundancia_promedio_name <- abundancia_relativa_name %>%
+  group_by(Grupo, Preferred_name_clean) %>%
+  summarise(promedio_abund = mean(abund_rel), .groups = "drop")
+
+```
+### --- Step 5: Calculate total abundance for each taxon ---
+```{r}
+porcentaje_por_name <- abundancia_promedio_name %>%
+  group_by(Preferred_name_clean) %>%
+  summarise(total_abund = sum(promedio_abund), .groups = "drop") %>%
+  arrange(desc(total_abund))
+
+```
+### --- Step 6: Query NCBI taxonomic hierarchies for top 50 names ---
+```{r}
+top_raw_names <- porcentaje_por_name %>%
+  slice_head(n = 50) %>%
+  pull(Preferred_name_clean)
+
+```
+### Limpiar para taxize (quitar "unclassified " para evitar errores)
+```{r}
+cleaned_top_names <- gsub("unclassified ", "", top_raw_names)
+```
+### Filtrar nombres vacíos, guiones o NA
+```{r}
+cleaned_top_names <- cleaned_top_names[cleaned_top_names != "" & cleaned_top_names != "-" & !is.na(cleaned_top_names)]
+
+```
+### Reemplazar "Bacteroidetes" por "Bacteroidota" (nombre aceptado en NCBI)
+```{r}
+cleaned_top_names <- gsub("^Bacteroidetes$", "Bacteroidota", cleaned_top_names)
+
+```
+### Ahora consulta con ask = TRUE para esos ambiguos, o directamente FALSE si ya limpiaste
+```{r}
+tax_data <- classification(cleaned_top_names, db = "ncbi", ask = FALSE)
+
+```
+### --- Step 7 (modified): Extract the most specific taxon for each name ---
+```{r}
+tax_levels <- c("species", "genus", "family", "order", "class", "phylum", "superkingdom")
+
+```
+### Inicializamos tax_info con el tamaño y nombres originales para evitar problemas
+```{r}
+tax_info <- data.frame(Name = top_raw_names,
+                       Taxon_especifico = NA_character_,
+                       Rank = NA_character_,
+                       stringsAsFactors = FALSE)
+
+for (i in seq_along(tax_data)) {
+  taxon <- tax_data[[i]]
+  
+```
+### Saltar si taxon es NULL o de clase lógica (como FALSE)
+```{r}
+  if (is.null(taxon) || is.logical(taxon)) next
+  
+```
+### Filtrar niveles de interés
+```{r}
+  taxon_filtered <- taxon %>%
+    filter(rank %in% tax_levels)
+  
+  if (nrow(taxon_filtered) > 0) {
+    taxon_filtered$level_num <- match(taxon_filtered$rank, tax_levels)
+    most_specific <- taxon_filtered %>%
+      arrange(level_num) %>%
+      slice(1)
+    tax_info$Taxon_especifico[i] <- most_specific$name
+    tax_info$Rank[i] <- most_specific$rank
+  }
+}
+
+```
+### Agregar la columna Original_Name (el nombre completo, con posibles "unclassified")
+```{r}
+tax_info$Original_Name <- top_raw_names
+
+```
+### Crear columna Taxon_final con prefijo "unclassified " si lo tenía el nombre original
+```{r}
+tax_info$Taxon_final <- ifelse(grepl("^unclassified ", tax_info$Original_Name),
+                               paste0("unclassified ", tax_info$Taxon_especifico),
+                               tax_info$Taxon_especifico)
+
+```
+### --- Step 9: Merge abundance with tax_info to use Taxon_final ---
+```{r}
+abundancia_promedio_name <- abundancia_promedio_name %>%
+  left_join(tax_info %>% select(Original_Name, Taxon_final),
+            by = c("Preferred_name_clean" = "Original_Name")) %>%
+  mutate(Taxon_final = ifelse(is.na(Taxon_final), Preferred_name_clean, Taxon_final))
+
+```
+### --- Step 10: Select top 15 most specific taxa to plot ---
+```{r}
+top_taxa_final <- abundancia_promedio_name %>%
+  group_by(Taxon_final) %>%
+  summarise(total_abund = sum(promedio_abund), .groups = "drop") %>%
+  arrange(desc(total_abund)) %>%
+  slice_head(n = 15) %>%
+  pull(Taxon_final)
+
+abundancia_promedio_taxon_top <- abundancia_promedio_name %>%
+  filter(Taxon_final %in% top_taxa_final)
+
+```
+### --- Step 11: Labels and colors for plot ---
+```{r}
+labels_taxon_top <- abundancia_promedio_taxon_top %>%
+  group_by(Taxon_final) %>%
+  summarise(total_abund = sum(promedio_abund)) %>%
+  ungroup() %>%
+  mutate(label = paste0(Taxon_final, " (", percent(total_abund / sum(total_abund)), ")")) %>%
+  arrange(match(Taxon_final, top_taxa_final)) %>%
+  pull(label)
+names(labels_taxon_top) <- top_taxa_final
+
+colors_top <- colorRampPalette(brewer.pal(12, "Set3"))(15)
+
+```
+### --- Step 12: Text of annotated genes for bacteria ---
+```{r}
+texto_genes_bact <- paste0(
+  "Bacterial annotated genes (Rural: ", sum(anot_bacteria$Grupo == "Rural"),
+  " | Urban: ", sum(anot_bacteria$Grupo == "Urban"), ")"
+)
+
+```
+### --- Step 13: Bar plot ---
+```{r}
+plot_bacteria <- ggplot(abundancia_promedio_taxon_top,
+                        aes(x = Grupo, y = promedio_abund, fill = Taxon_final)) +
+  geom_bar(stat = "identity", position = "fill") +
+  scale_y_continuous(labels = percent_format()) +
+  scale_fill_manual(values = colors_top, labels = labels_taxon_top) +
+  labs(
+    title = "",
+    x = "Group",
+    y = "Relative abundance (%)",
+    fill = "Taxon"
+  ) +
+  theme_classic(base_size = 12) +
+  theme(
+    legend.position = "right",
+    axis.text.x = element_text(size = 12),
+    axis.text.y = element_text(size = 12),
+    plot.title = element_text(size = 12, face = "plain", hjust = 0),
+    plot.margin = margin(t = 20, r = 20, b = 0, l = 20)
+  )
+
+```
+### --- Step 14: Text below the plot ---
+```{r}
+plot_texto_bact <- ggplot() +
+  annotate("text", x = 0.5, y = 0.5, label = texto_genes_bact, size = 3, hjust = 0.5) +
+  theme_void()
+
+```
+### --- Step 15: Combine plot and text ---
+### plot_bacteriafunano <- plot_bacteria / plot_texto_bact + patchwork::plot_layout(heights = c(10, 1))
+```{r}
+plot_bacteriafunano <- plot_bacteria 
+
+```
+### --- Show result ---
+```{r}
+plot_bacteriafunano
+
+
+
+
+```
+### Part C
+```{r}
+
+anot_eukaryota <- anot %>%
+  filter(Domain_simplified == "Eukaryota") %>%
+  filter(grepl("\\|", Preferred_name)) %>% # ❗️ only those with '|'
+  mutate(
+    Preferred_name_clean = sub(".*\\|", "", Preferred_name)
+  ) %>%
+  filter(Preferred_name_clean != "")
+
+
+score_total_por_file_euk <- anot_eukaryota %>%
+  group_by(File) %>%
+  summarise(score_total = sum(score, na.rm = TRUE), .groups = "drop")
+
+score_por_file_name_euk <- anot_eukaryota %>%
+  group_by(File, Preferred_name_clean) %>%
+  summarise(score_name = sum(score, na.rm = TRUE), .groups = "drop")
+
+abundancia_relativa_name_euk <- score_por_file_name_euk %>%
+  left_join(score_total_por_file_euk, by = "File") %>%
+  mutate(abund_rel = score_name / score_total) %>%
+  left_join(anot_eukaryota %>% select(File, Grupo) %>% distinct(), by = "File") %>%
+  filter(!is.na(abund_rel), !is.na(Preferred_name_clean))
+
+
+abundancia_promedio_name_euk <- abundancia_relativa_name_euk %>%
+  group_by(Grupo, Preferred_name_clean) %>%
+  summarise(promedio_abund = mean(abund_rel), .groups = "drop")
+
+top_raw_names_euk <- abundancia_promedio_name_euk %>%
+  group_by(Preferred_name_clean) %>%
+  summarise(total_abund = sum(promedio_abund)) %>%
+  arrange(desc(total_abund)) %>%
+  slice_head(n = 50) %>%
+  pull(Preferred_name_clean)
+
+cleaned_top_names_euk <- gsub("unclassified ", "", top_raw_names_euk)
+cleaned_top_names_euk <- cleaned_top_names_euk[cleaned_top_names_euk != "" & cleaned_top_names_euk != "-" & !is.na(cleaned_top_names_euk)]
+
+```
+### Query taxonomy
+```{r}
+tax_data_euk <- classification(cleaned_top_names_euk, db = "ncbi", ask = FALSE)
+
+tax_info_euk <- data.frame(Name = top_raw_names_euk,
+                           Taxon_especifico = NA_character_,
+                           Rank = NA_character_,
+                           stringsAsFactors = FALSE)
+
+for (i in seq_along(tax_data_euk)) {
+  taxon <- tax_data_euk[[i]]
+  if (is.null(taxon) || is.logical(taxon)) next
+  taxon_filtered <- taxon %>% filter(rank %in% tax_levels)
+  if (nrow(taxon_filtered) > 0) {
+    taxon_filtered$level_num <- match(taxon_filtered$rank, tax_levels)
+    most_specific <- taxon_filtered %>% arrange(level_num) %>% slice(1)
+    tax_info_euk$Taxon_especifico[i] <- most_specific$name
+    tax_info_euk$Rank[i] <- most_specific$rank
+  }
+}
+
+tax_info_euk$Original_Name <- top_raw_names_euk
+tax_info_euk$Taxon_final <- ifelse(grepl("^unclassified ", tax_info_euk$Original_Name),
+                                   paste0("unclassified ", tax_info_euk$Taxon_especifico),
+                                   tax_info_euk$Taxon_especifico)
+abundancia_promedio_name_euk <- abundancia_promedio_name_euk %>%
+  left_join(tax_info_euk %>% select(Original_Name, Taxon_final),
+            by = c("Preferred_name_clean" = "Original_Name")) %>%
+  mutate(Taxon_final = ifelse(is.na(Taxon_final), Preferred_name_clean, Taxon_final))
+
+top_taxa_final_euk <- abundancia_promedio_name_euk %>%
+  group_by(Taxon_final) %>%
+  summarise(total_abund = sum(promedio_abund), .groups = "drop") %>%
+  arrange(desc(total_abund)) %>%
+  slice_head(n = 15) %>%
+  pull(Taxon_final)
+
+abundancia_promedio_taxon_top_euk <- abundancia_promedio_name_euk %>%
+  filter(Taxon_final %in% top_taxa_final_euk)
+
+```
+### Labels
+```{r}
+labels_taxon_top_euk <- abundancia_promedio_taxon_top_euk %>%
+  group_by(Taxon_final) %>%
+  summarise(total_abund = sum(promedio_abund)) %>%
+  ungroup() %>%
+  mutate(label = paste0(Taxon_final, " (", percent(total_abund / sum(total_abund)), ")")) %>%
+  arrange(match(Taxon_final, top_taxa_final_euk)) %>%
+  pull(label)
+names(labels_taxon_top_euk) <- top_taxa_final_euk
+
+colors_top_euk <- colorRampPalette(brewer.pal(12, "Paired"))(15)
+
+texto_genes_euk <- paste0(
+  "Eukaryotic annotated genes (Rural: ", sum(anot_eukaryota$Grupo == "Rural"),
+  " | Urban: ", sum(anot_eukaryota$Grupo == "Urban"), ")"
+)
+
+```
+### Plot
+```{r}
+plot_euk <- ggplot(abundancia_promedio_taxon_top_euk,
+                   aes(x = Grupo, y = promedio_abund, fill = Taxon_final)) +
+  geom_bar(stat = "identity", position = "fill") +
+  scale_y_continuous(labels = percent_format()) +
+  scale_fill_manual(values = colors_top_euk, labels = labels_taxon_top_euk) +
+  labs(
+    title = "",
+    x = "Group",
+    y = "Relative abundance (%)",
+    fill = "Taxon"
+  ) +
+  theme_classic(base_size = 12) +
+  theme(
+    legend.position = "right",
+    plot.title = element_text(size = 12, face = "plain", hjust = 0),
+    plot.margin = margin(t = 20, r = 20, b = 0, l = 20)
+  )
+
+plot_texto_euk <- ggplot() +
+  annotate("text", x = 0.5, y = 0.5, label = texto_genes_euk, size = 3, hjust = 0.5) +
+  theme_void()
+plot_euk_final <- plot_euk / plot_texto_euk + patchwork::plot_layout(heights = c(10, 1))
+plot_eukfunanon <- plot_euk 
+
+```
+### This
+```{r}
+plot_eukfunanon
+library(patchwork)
+```
+## ABC UNITED
+```{r}
+final_plotfunaon <- ( plot_funanondoms|plot_bacteriafunano|plot_eukfunanon
+) +
+  plot_annotation(tag_levels = "A", tag_prefix = "", tag_suffix = "") &
+  theme(
+    plot.tag = element_text(size = 14, face = "plain")
+  )
+
+final_plotfunaon
+
 ```
