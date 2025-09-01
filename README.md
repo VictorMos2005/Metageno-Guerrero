@@ -28,6 +28,7 @@ Figures
 - [Mean relative abundance of the most prevalent bacterial and eukaryotic genera in rural and urban samples](#mean-relative-abundance-of-the-most-prevalent-bacterial-and-eukaryotic-genera-in-rural-and-urban-samples)
 - Volcano graphs
   - [Setup](#setup)
+  - [Rural vs Urban (Bacteria and Eukaryota without Chordata)](rural-vs-urban-(bacteria-and-eukaryota-without-chordata))
 
 ---
 
@@ -2921,4 +2922,338 @@ volcano_plot <- function(df_stats, title_txt, out_png) {
 }
 
 
+```
+## Rural vs Urban (Bacteria and Eukaryota without Chordata)
+```{r}
+
+rm(list = ls(envir = .GlobalEnv), envir = .GlobalEnv); invisible(gc())
+
+```
+### --- 1. DATA LOADING AND CLEANING ---
+```{r}
+kaiju_merged <- read.csv(
+  file = "/home/alumno21/axel/files/kaiju_merged_final.csv",
+  header = TRUE,
+  sep = ",",
+  fileEncoding = "latin1",
+  stringsAsFactors = FALSE,
+  na.strings = c("", "NA")
+)
+
+```
+### --- Urban and Rural lists adapted with suffix "_kaiju.out" ---
+```{r}
+urban_files_kaiju <- paste0(c("37082_2 # 1", "37082_1#20", "37082_1#27", "37035_2#13", "37035_1#29",
+                              "37082_2 # 14", "37035_2#12", "37035_2#6", "37082_1#17", "37035_2#14",
+                              "37082_1 # 26", "37035_1#30", "37035_1#32", "37082_1#15", "37082_2#15",
+                              "37082_1 # 13", "37035_2#10", "37082_1#31", "37035_2#17", "37035_2#8",
+                              "37035_2 # 23", "37035_2#31", "37035_2#24", "37082_2#5", "36703_3#5",
+                              "37082_1 # 10", "36703_3#7", "37082_2#9", "37082_2#3", "37035_2#2",
+                              "37035_2 # 3", "37035_2#19", "37035_2#21", "36703_3#1", "37082_1#24",
+                              "36703_3 # 2", "37035_2#4", "37035_2#15", "37035_2#18", "37035_2#28",
+                              "37082_2 # 13", "37082_1#22", "37082_1#29", "37082_1#19", "37035_2#30",
+                              "37082_1 # 16", "37035_1#31", "37035_2#7", "37082_1#30", "37035_2#16",
+                              "37082_2 # 11", "37082_1#14", "37035_2#5", "37082_2#4", "37082_1#18",
+                              "37035_2 # 1", "37082_1#23", "37082_2#12", "37082_1#11", "37082_1#12",
+                              "37035_2 # 11", "37035_2#25", "37082_1#32", "37082_1#9", "37035_2#29",
+                              "37082_1 # 21", "37082_2#2", "37035_2#27", "36703_3#3", "37082_2#6",
+                              "37035_2 # 20", "37082_2#7", "37082_2#8", "37082_2#10", "37082_1#28",
+                              "36703_3 # 10", "37035_2#9", "37082_1#25", "36703_3#8", "36703_3#9",
+                              "37035_2 # 26", "36703_3#6", "37035_2#32", "36703_3#4", "37035_2#22"),
+                            "_kaiju.out")
+
+rural_files_kaiju <- paste0(c("37082_3 # 17", "37082_3#15", "37035_1#22", "36703_3#31", "37082_2#24",
+                              "36703_3 # 26", "37035_7#10", "36703_3#21", "37082_2#22", "37035_7#2",
+                              "37082_3 # 7", "37035_7#6", "37035_1#7", "37035_7#9", "37082_2#30",
+                              "37035_1 # 18", "37035_7#4", "37082_3#13", "37082_3#32", "37035_1#8",
+                              "37035_7 # 7", "37035_1#19", "37082_3#29", "37035_7#13", "37035_7#12",
+                              "37082_2 # 16", "36703_3#25", "37082_3#27", "37082_3#5", "37082_3#21",
+                              "37082_2 # 19", "37082_3#16", "37035_1#5", "37082_3#1", "37035_7#11",
+                              "37035_7 # 5", "36703_3#13", "37035_7#14", "37035_1#1", "37082_3#11",
+                              "37035_1 # 10", "37035_1#12", "37082_3#4", "36703_3#17", "36703_3#27",
+                              "37082_3 # 19", "37082_2#18", "36703_3#29", "36703_3#12", "36703_3#32",
+                              "37035_1 # 15", "37035_1#27", "37035_1#13", "37035_7#8", "37035_1#6",
+                              "37082_3 # 24", "36703_3#30", "37035_7#1", "37035_1#16", "37035_7#15",
+                              "37082_3 # 26", "37035_1#23", "37035_1#2", "37082_2#27", "37035_7#3",
+                              "37082_2 # 20", "36703_3#16", "37082_3#8", "37035_1#25", "36703_3#14",
+                              "37082_3 # 3", "37035_1#4", "37082_2#29", "37082_3#30", "37082_2#31",
+                              "37035_7 # 22", "37035_7#16", "37082_2#17", "36703_3#18", "37035_1#11",
+                              "37035_1 # 3", "37035_1#14", "37082_3#9", "36703_3#23", "37082_2#28",
+                              "37082_2 # 21", "37082_3#31", "36703_3#20", "37082_2#25", "36703_3#19",
+                              "37082_2 # 26", "37082_3#6", "37035_1#17", "37082_2#23", "36703_3#15",
+                              "36703_3 # 28", "37082_3#12", "37082_2#32", "37082_3#10", "36703_3#22",
+                              "37082_3 # 28", "36703_3#24", "37082_3#18", "37082_3#20", "37035_1#24",
+                              "37082_3 # 23", "37082_3#2", "37035_1#20", "37082_3#22", "37082_3#25",
+                              "37082_3 # 14", "37035_1#9", "36703_3#11", "37035_1#21", "37035_7#20",
+                              "37035_7 # 17", "37035_7#21", "37035_7#19", "37035_1#26", "37035_7#24",
+                              "37035_7 # 18", "37035_7#23", "37035_7#25"),
+                            "_kaiju.out")
+
+```
+### --- Correctly assign file_base and Group ---
+```{r}
+kaiju_merged <- kaiju_merged %>%
+  mutate(
+    file_base = paste0(gsub("\\.out$", "", basename(file)), "_kaiju.out"),
+    Group = case_when(
+      file_base %in% urban_files_kaiju ~ "Urban",
+      file_base %in% rural_files_kaiju ~ "Rural",
+      TRUE ~ NA_character_
+    )
+  ) %>%
+  filter(!is.na(Group))
+
+```
+### Default device depending on environment
+```{r}
+if (Sys.getenv("RSTUDIO") == "1") {
+  options(device = "RStudioGD")
+} else {
+  options(bitmapType = "cairo")
+}
+graphics.off()
+
+suppressPackageStartupMessages({
+  library(dplyr); library(tidyr); library(stringr)
+  library(ggplot2); library(readr); library(purrr); library(tibble)
+  library(ggrepel)
+})
+
+set.seed(1234)
+
+```
+### ================== PARAMETERS ==================
+```{r}
+PSEUDO      <- 1e-8 # para evitar log2(0) y divisiones por 0
+ALPHA_Q     <- 0.05 # umbral FDR
+MIN_PREV    <- 0.20 # prevalencia mínima (≥10% de muestras con >0)
+LABEL_TOP_N <- 15 # cuántas etiquetas en el volcán
+OUT_PREFIX  <- "volcano_Rural_vs_Urban"
+
+```
+### ============== CHECKS & PREPARATION ==============
+```{r}
+stopifnot(exists("kaiju_merged"))
+
+dat0 <- kaiju_merged %>% as_tibble()
+colnames(dat0)
+```
+### Ensure types/columns; if Domain/Genus/Phylum is missing, try from taxon_name
+```{r}
+need_cols <- c("file_base","Group","Domain","Genus","reads")
+if (!all(need_cols %in% names(dat0))) {
+  if ("taxon_name" %in% names(dat0)) {
+    dat0 <- dat0 %>%
+      tidyr::separate(
+        taxon_name,
+        into = c("Organism","Domain","Supergroup","Kingdom","Phylum","Class",
+                 "Subclass","Order","Family","Genus","Species"),
+        sep = ";", fill = "right", extra = "drop", remove = FALSE
+      )
+  }
+}
+stopifnot(all(need_cols %in% names(dat0)))
+
+```
+### Minimal normalization
+```{r}
+dat0 <- dat0 %>%
+  mutate(
+    Group  = case_when(Group %in% c("Rural","Urban") ~ Group, TRUE ~ NA_character_),
+    Domain = str_trim(Domain),
+    Genus  = str_trim(Genus),
+    reads  = suppressWarnings(as.numeric(reads))
+  ) %>%
+  filter(!is.na(Group), !is.na(Domain), !is.na(Genus), !is.na(reads))
+
+```
+### Exclude Homo and empty entries
+```{r}
+dat0 <- dat0 %>%
+  filter(!(Domain == "Eukaryota" & Genus %in% c("Homo","Homo sapiens"))) %>%
+  filter(Genus != "")
+
+```
+### Exclude Chordata in Eukaryota
+```{r}
+if ("Phylum" %in% names(dat0)) {
+  dat0 <- dat0 %>% mutate(Phylum = str_trim(Phylum)) %>%
+    filter(!(Domain == "Eukaryota" & Phylum == "Chordata"))
+} else if ("taxon_name" %in% names(dat0)) {
+  if (!"Phylum" %in% names(dat0)) {
+    dat0 <- dat0 %>%
+      tidyr::separate(
+        taxon_name,
+        into = c("Organism","Domain2","Supergroup","Kingdom","Phylum","Class",
+                 "Subclass","Order","Family","Genus2","Species"),
+        sep = ";", fill = "right", extra = "drop", remove = FALSE
+      ) %>%
+      mutate(Phylum = ifelse(is.na(Phylum), "", Phylum)) %>%
+      select(-Domain2, -Genus2)
+  }
+  dat0 <- dat0 %>% filter(!(Domain == "Eukaryota" & Phylum == "Chordata"))
+}
+
+```
+### Keep only Bacteria and Eukaryota
+```{r}
+dat0 <- dat0 %>% filter(Domain %in% c("Bacteria","Eukaryota"))
+
+```
+### ===== Relative abundance within DOMAIN per sample =====
+```{r}
+totals_domain <- dat0 %>%
+  group_by(file_base, Domain) %>%
+  summarise(total_reads_domain = sum(reads, na.rm = TRUE), .groups = "drop")
+
+genus_reads <- dat0 %>%
+  group_by(file_base, Group, Domain, Genus) %>%
+  summarise(reads = sum(reads, na.rm = TRUE), .groups = "drop") %>%
+  left_join(totals_domain, by = c("file_base","Domain")) %>%
+  mutate(rel_abund = if_else(total_reads_domain > 0, reads / total_reads_domain, 0)) %>%
+  ungroup()
+
+```
+### ===== Global prevalence filter =====
+```{r}
+prev_tbl <- genus_reads %>%
+  group_by(Domain, Genus) %>%
+  summarise(prev = mean(rel_abund > 0), .groups = "drop")
+
+keepers <- prev_tbl %>% filter(prev >= MIN_PREV) %>% select(Domain, Genus)
+
+genus_reads_f <- genus_reads %>% inner_join(keepers, by = c("Domain","Genus"))
+
+```
+### ===== Test by domain (Wilcoxon R vs U on rel_abund) =====
+```{r}
+test_by_domain <- function(df_domain, domain_label) {
+  df_domain %>%
+    group_by(Genus) %>%
+    summarise(
+      n_Rural    = sum(Group == "Rural"),
+      n_Urban    = sum(Group == "Urban"),
+      mean_Rural = mean(rel_abund[Group == "Rural"], na.rm = TRUE),
+      mean_Urban = mean(rel_abund[Group == "Urban"], na.rm = TRUE),
+      log2FC     = log2((mean_Rural + PSEUDO) / (mean_Urban + PSEUDO)),
+      p = tryCatch({
+        x <- rel_abund[Group == "Rural"]; y <- rel_abund[Group == "Urban"]
+        if (length(x) >= 2 && length(y) >= 2 && (sd(x) > 0 || sd(y) > 0)) {
+          wilcox.test(x, y, exact = FALSE)$p.value
+        } else NA_real_
+      }, error = function(e) NA_real_),
+      .groups = "drop"
+    ) %>%
+    mutate(
+      q         = p.adjust(p, method = "BH"),
+      negLog10Q = -log10(pmax(q, .Machine$double.xmin)),
+      Domain    = domain_label
+    ) %>%
+    arrange(q, desc(abs(log2FC)))
+}
+
+res_bact <- genus_reads_f %>% filter(Domain == "Bacteria")  %>% test_by_domain("Bacteria")
+res_euk  <- genus_reads_f %>% filter(Domain == "Eukaryota") %>% test_by_domain("Eukaryota")
+
+```
+### ===== (Optional) ZicoSeq if available: add Zico p/q columns =====
+```{r}
+run_zicoseq_safe <- function(df_all, domain_label) {
+  if (!requireNamespace("ZicoSeq", quietly = TRUE)) return(NULL)
+  mat <- df_all %>%
+    select(file_base, Genus, reads, Group) %>%
+    group_by(file_base, Genus, Group) %>%
+    summarise(reads = sum(reads), .groups = "drop") %>%
+    pivot_wider(names_from = Genus, values_from = reads, values_fill = 0)
+  if (nrow(mat) < 4) return(NULL)
+  meta   <- mat %>% select(file_base, Group)
+  counts <- mat %>% select(-file_base, -Group) %>% as.data.frame()
+  rownames(counts) <- mat$file_base
+  
+  zres <- tryCatch(ZicoSeq::ZicoSeq(
+    feature.dat = t(counts), meta.dat = meta, grp = "Group",
+    adj.method = "BH", n.perm.max = 1000, msg = FALSE
+  ), error = function(e) NULL)
+  if (is.null(zres)) return(NULL)
+  
+  tibble(
+    Genus     = rownames(zres$raw.pval),
+    p_zico    = as.numeric(zres$raw.pval[,1]),
+    q_zico    = as.numeric(zres$adj.pval[,1]),
+    stat_zico = as.numeric(zres$stat[,1]),
+    Domain    = domain_label
+  )
+}
+
+z_bact <- run_zicoseq_safe(dat0 %>% filter(Domain=="Bacteria"),  "Bacteria")
+z_euk  <- run_zicoseq_safe(dat0 %>% filter(Domain=="Eukaryota"), "Eukaryota")
+
+if (!is.null(z_bact)) res_bact <- res_bact %>% left_join(z_bact %>% select(Genus, p_zico, q_zico, stat_zico), by = "Genus")
+if (!is.null(z_euk))  res_euk  <- res_euk  %>% left_join(z_euk  %>% select(Genus, p_zico, q_zico, stat_zico), by = "Genus")
+
+```
+### ===== Save tables =====
+```{r}
+readr::write_tsv(res_bact, paste0(OUT_PREFIX, "_Bacteria_stats.tsv"))
+readr::write_tsv(res_euk,  paste0(OUT_PREFIX, "_Eukaryota_stats.tsv"))
+
+volcano_plot <- function(df_stats, title_txt, out_png) {
+  df_stats <- df_stats %>%
+    mutate(
+      sig = case_when(
+        is.na(q) ~ "NA",
+        q <= ALPHA_Q ~ "FDR ≤ 0.05",
+        TRUE ~ "NS"
+      ),
+      group_color = ifelse(log2FC >= 0, "Rural", "Urban")
+    )
+  
+  lab_df <- df_stats %>%
+    arrange(q, desc(abs(log2FC))) %>%
+    slice_head(n = LABEL_TOP_N)
+  
+  p <- ggplot(df_stats, aes(x = log2FC, y = negLog10Q)) +
+    geom_point(aes(shape = sig, color = group_color), alpha = 0.6, size = 2.5, na.rm = TRUE) +
+    scale_color_manual(values = c("Rural" = " # E69F00", "Urban" = "#0072B2")) +
+    geom_hline(yintercept = -log10(ALPHA_Q), linetype = "dashed", size = 0.1) +
+    geom_vline(xintercept = 0, linetype = "dashed", size = 0.1) +
+    ggrepel::geom_text_repel(
+      data = lab_df,
+      aes(label = Genus, color = group_color),
+      size = 3.5, max.overlaps = Inf, box.padding = 0.4, min.segment.length = 0, show.legend = FALSE
+    ) +
+    labs(
+      title = title_txt,
+      x = "log2 Fold-Change (Rural / Urban)",
+      y = expression(-log[10]("FDR (BH)")),
+      shape = NULL,
+      color = "Higher in"
+    ) +
+    theme_bw(base_size = 12) +
+    theme(plot.title = element_text(face = "bold"),
+          legend.position = "top")
+  
+```
+### Show in the Plots panel
+```{r}
+  print(p)
+  
+```
+### Save robustly with cairo
+```{r}
+  tp <- if (.Platform$OS.type == "windows") "cairo-png" else "cairo"
+  png(out_png, width = 8, height = 6, units = "in", res = 300, type = tp)
+  print(p); dev.off()
+  
+  message("Volcano guardado: ", out_png)
+  invisible(p)
+}
+
+```
+### Calls
+```{r}
+volcano_plot(res_bact, "", paste0(OUT_PREFIX, "_Bacteria.png"))
+volcano_plot(res_euk,  "", paste0(OUT_PREFIX, "_Eukaryota.png"))
+
+---------------------------------
 ```
