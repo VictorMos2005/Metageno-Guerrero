@@ -28,7 +28,7 @@ Figures
 - [Mean relative abundance of the most prevalent bacterial and eukaryotic genera in rural and urban samples](#mean-relative-abundance-of-the-most-prevalent-bacterial-and-eukaryotic-genera-in-rural-and-urban-samples)
 - Volcano graphs
   - [Setup](#setup)
-  - [Rural vs Urban (Bacteria and Eukaryota without Chordata)](#rural-vs-urban-(bacteria-and-eukaryota-without-chordata))
+  - [Rural vs Urban](#rural-vs-urban))
 
 ---
 
@@ -2923,7 +2923,7 @@ volcano_plot <- function(df_stats, title_txt, out_png) {
 
 
 ```
-## Rural vs Urban (Bacteria and Eukaryota without Chordata)
+## Rural vs Urban
 ```{r}
 
 rm(list = ls(envir = .GlobalEnv), envir = .GlobalEnv); invisible(gc())
