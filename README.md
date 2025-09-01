@@ -6668,7 +6668,7 @@ anot_with_cog <- anot_with_cog %>% filter(Grupo %in% c("Rural","Urban"))
 
 ```
 ### =========================================
-### Librerías
+### libraries
 ### =========================================
 ```{r}
 suppressPackageStartupMessages({
@@ -6678,7 +6678,7 @@ suppressPackageStartupMessages({
 
 ```
 ### =========================================
-### Helpers básicos + núcleo de análisis
+### Basic helpers + analisis nucleus
 ### =========================================
 ```{r}
 
@@ -6923,5 +6923,3 @@ p <- plot_volcano_all(
 print(p)
 
 ```
-
-
