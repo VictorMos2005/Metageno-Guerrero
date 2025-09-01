@@ -31,6 +31,7 @@ Figures
   - [Rural vs Urban](#rural-vs-urban)
   - [BMI<25 vs BMI≥25](#bmi)
   - [BMI≥25 Rural vs BMI≥25 Urban](#bmiru)
+  - [BUSCO completeness assessment of MAGs](#busco-completeness-assessment-of-mags)
 
 ---
 
@@ -3800,4 +3801,190 @@ message("\nListo. Archivos generados:\n - ", OUT_PREFIX, "_Bacteria_stats.tsv",
         "\n - ", OUT_PREFIX, "_Bacteria.png",
         "\n - ", OUT_PREFIX, "_Eukaryota.png")
 
+```
+
+## BUSCO completeness assessment of MAGs
+
+#### For the comprehension of the specific demographic signatures,
+#### we recovered 713 MAGs in total by focusing on the 10 highest-read
+#### individuals for each of the ten differential lineages identified
+#### previously, five bacterial and five eukaryotic taxa (Fig. 10).
+#### Rural and Urban cohorts contributed roughly equal shares of these genomes
+#### (Fig. 10A–B). Across MAGs, single-copy BUSCOs dominated the profiles,
+#### whereas duplicated, fragmented, and missing categories formed minor
+#### fractions, yielding near-identical distributions between lifestyles
+#### (Fig. 10A vs. 10B).
+```{r}
+
+```
+### Summary figure of MAGs
+### We need the BUSCO file "tabla_busco.csv"
+```{r}
+buscos <- read.csv("/home/alumno21/axel/files/tabla_busco.csv", sep = ",", stringsAsFactors = FALSE)
+colnames(buscos)
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+urban_files <- c("37082_2 # 1", "37082_1#20", "37082_1#27", "37035_2#13", "37035_1#29",
+                 "37082_2 # 14", "37035_2#12", "37035_2#6", "37082_1#17", "37035_2#14",
+                 "37082_1 # 26", "37035_1#30", "37035_1#32", "37082_1#15", "37082_2#15",
+                 "37082_1 # 13", "37035_2#10", "37082_1#31", "37035_2#17", "37035_2#8",
+                 "37035_2 # 23", "37035_2#31", "37035_2#24", "37082_2#5", "36703_3#5",
+                 "37082_1 # 10", "36703_3#7", "37082_2#9", "37082_2#3", "37035_2#2",
+                 "37035_2 # 3", "37035_2#19", "37035_2#21", "36703_3#1", "37082_1#24",
+                 "36703_3 # 2", "37035_2#4", "37035_2#15", "37035_2#18", "37035_2#28",
+                 "37082_2 # 13", "37082_1#22", "37082_1#29", "37082_1#19", "37035_2#30",
+                 "37082_1 # 16", "37035_1#31", "37035_2#7", "37082_1#30", "37035_2#16",
+                 "37082_2 # 11", "37082_1#14", "37035_2#5", "37082_2#4", "37082_1#18",
+                 "37035_2 # 1", "37082_1#23", "37082_2#12", "37082_1#11", "37082_1#12",
+                 "37035_2 # 11", "37035_2#25", "37082_1#32", "37082_1#9", "37035_2#29",
+                 "37082_1 # 21", "37082_2#2", "37035_2#27", "36703_3#3", "37082_2#6",
+                 "37035_2 # 20", "37082_2#7", "37082_2#8", "37082_2#10", "37082_1#28",
+                 "36703_3 # 10", "37035_2#9", "37082_1#25", "36703_3#8", "36703_3#9",
+                 "37035_2 # 26", "36703_3#6", "37035_2#32", "36703_3#4", "37035_2#22")
+rural_files <- c("37082_3 # 17", "37082_3#15", "37035_1#22", "36703_3#31", "37082_2#24",
+                 "36703_3 # 26", "37035_7#10", "36703_3#21", "37082_2#22", "37035_7#2",
+                 "37082_3 # 7", "37035_7#6", "37035_1#7", "37035_7#9", "37082_2#30",
+                 "37035_1 # 18", "37035_7#4", "37082_3#13", "37082_3#32", "37035_1#8",
+                 "37035_7 # 7", "37035_1#19", "37082_3#29", "37035_7#13", "37035_7#12",
+                 "37082_2 # 16", "36703_3#25", "37082_3#27", "37082_3#5", "37082_3#21",
+                 "37082_2 # 19", "37082_3#16", "37035_1#5", "37082_3#1", "37035_7#11",
+                 "37035_7 # 5", "36703_3#13", "37035_7#14", "37035_1#1", "37082_3#11",
+                 "37035_1 # 10", "37035_1#12", "37082_3#4", "36703_3#17", "36703_3#27",
+                 "37082_3 # 19", "37082_2#18", "36703_3#29", "36703_3#12", "36703_3#32",
+                 "37035_1 # 15", "37035_1#27", "37035_1#13", "37035_7#8", "37035_1#6",
+                 "37082_3 # 24", "36703_3#30", "37035_7#1", "37035_1#16", "37035_7#15",
+                 "37082_3 # 26", "37035_1#23", "37035_1#2", "37082_2#27", "37035_7#3",
+                 "37082_2 # 20", "36703_3#16", "37082_3#8", "37035_1#25", "36703_3#14",
+                 "37082_3 # 3", "37035_1#4", "37082_2#29", "37082_3#30", "37082_2#31",
+                 "37035_7 # 22", "37035_7#16", "37082_2#17", "36703_3#18", "37035_1#11",
+                 "37035_1 # 3", "37035_1#14", "37082_3#9", "36703_3#23", "37082_2#28",
+                 "37082_2 # 21", "37082_3#31", "36703_3#20", "37082_2#25", "36703_3#19",
+                 "37082_2 # 26", "37082_3#6", "37035_1#17", "37082_2#23", "36703_3#15",
+                 "36703_3 # 28", "37082_3#12", "37082_2#32", "37082_3#10", "36703_3#22",
+                 "37082_3 # 28", "36703_3#24", "37082_3#18", "37082_3#20", "37035_1#24",
+                 "37082_3 # 23", "37082_3#2", "37035_1#20", "37082_3#22", "37082_3#25",
+                 "37082_3 # 14", "37035_1#9", "36703_3#11", "37035_1#21", "37035_7#20",
+                 "37035_7 # 17", "37035_7#21", "37035_7#19", "37035_1#26", "37035_7#24",
+                 "37035_7 # 18", "37035_7#23", "37035_7#25")
+
+```
+### Assign a unique name to the MAG
+```{r}
+buscos$id <- paste0(buscos$File, "_", buscos$MAG)
+
+```
+### Ensure that S, D, F, M are numeric
+```{r}
+buscos <- buscos %>%
+  mutate(across(c(S, D, F, M), as.numeric))
+
+```
+### Assign Rural or Urban group according to external vectors
+```{r}
+buscos$Group <- ifelse(buscos$File %in% rural_files, "Rural",
+                       ifelse(buscos$File %in% urban_files, "Urban", NA))
+
+```
+### Transform to long format
+```{r}
+buscos_long <- buscos %>%
+  select(id, Group, S, D, F, M) %>%
+  pivot_longer(cols = c(S, D, F, M),
+               names_to = "Status",
+               values_to = "Percent")
+
+```
+### More readable labels
+```{r}
+buscos_long$Status <- recode(buscos_long$Status,
+                             "S" = "Single-copy",
+                             "D" = "Duplicated",
+                             "F" = "Fragmented",
+                             "M" = "Missing")
+
+```
+### Create a consecutive label ID per group
+```{r}
+buscos_long <- buscos_long %>%
+  group_by(Group) %>%
+  mutate(label_id = dense_rank(id)) %>%
+  ungroup()
+
+```
+### Improved color palette
+```{r}
+busco_colors <- c(
+  "Single-copy" = " # 1f77b4",
+  "Duplicated" = " # ff7f0e",
+  "Fragmented" = " # 2ca02c",
+  "Missing" = " # d62728"
+)
+
+```
+### --- Individual plots ---
+```{r}
+
+plot_rural <- ggplot(buscos_long %>% filter(Group == "Rural"),
+                     aes(x = label_id, y = Percent, fill = Status)) +
+  geom_bar(stat = "identity", width = 0.8, alpha=0.85) +
+  scale_fill_manual(values = busco_colors) +
+  labs(
+    title = "",
+    x = "MAGs (consecutive IDs)",
+    y = "Percentage",
+    fill = "BUSCO Category"
+  ) +
+  theme_classic(base_size = 12) +
+  theme(
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    legend.position = "none",
+    plot.title = element_text(size = 12, face = "plain", hjust = 0.5)
+  )
+
+plot_urban <- ggplot(buscos_long %>% filter(Group == "Urban"),
+                     aes(x = label_id, y = Percent, fill = Status)) +
+  geom_bar(stat = "identity", width = 0.8, alpha=0.85) +
+  scale_fill_manual(values = busco_colors) +
+  labs(
+    title = "",
+    x = "MAGs (consecutive IDs)",
+    y = "Percentage",
+    fill = "BUSCO Category"
+  ) +
+  theme_classic(base_size = 12) +
+  theme(
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    legend.position = "right",
+    plot.title = element_text(size = 12, face = "plain", hjust = 0.5)
+  )
+
+
+
+```
+### --- Combine plots with patchwork ---
+```{r}
+
+
+combined_busco_plot <- plot_rural + plot_urban +
+  plot_layout(ncol = 2) +
+  plot_annotation(
+    title = "",
+    tag_levels = "A", # Letras automáticas: A, B...
+    tag_prefix = "", # Sin prefijos, solo letras
+    theme = theme(
+      plot.title = element_text(hjust = 0.5, size = 12, face = "plain"),
+      plot.margin = margin(t = 20, r = 20, b = 20, l = 20), # márgenes en todos lados
+      plot.tag = element_text(size = 16, face = "bold"),
+      plot.tag.position = c(0.1, 0.85)
+    )
+  )
+```
+### TABLA FINAL BUSCO COLORES
+```{r}
+combined_busco_plot
 ```
