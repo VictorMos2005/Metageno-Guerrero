@@ -25,7 +25,7 @@ Figures
 
 - [Alpha and beta diversity of Rural and Urban metagenomes.](#alpha-and-beta-diversity-of-rural-and-urban-metagenomes)
 - [Differentially abundant bacterial and eukaryotic taxa between Rural and Urban groups](#differentially-abundant-bacterial-and-eukaryotic-taxa-between-rural-and-urban-groups)
-- [Mean relative abundance of the most prevalent bacterial and eukaryotic genera in rural and urban samples.](mean-relative-abundance-of-the-most-prevalent-bacterial-and-eukaryotic-genera-in-rural-and-urban-samples.)
+- [Mean relative abundance of the most prevalent bacterial and eukaryotic genera in rural and urban samples.](#mean-relative-abundance-of-the-most-prevalent-bacterial-and-eukaryotic-genera-in-rural-and-urban-samples.)
 
 ---
 
