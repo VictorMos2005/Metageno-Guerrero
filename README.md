@@ -28,7 +28,7 @@ Figures
 - [Mean relative abundance of the most prevalent bacterial and eukaryotic genera in rural and urban samples](#mean-relative-abundance-of-the-most-prevalent-bacterial-and-eukaryotic-genera-in-rural-and-urban-samples)
 - Volcano graphs
   - [Setup](#setup)
-  - [Rural vs Urban](#rural-vs-urban))
+  - [Rural vs Urban](#rural-vs-urban)
 
 ---
 
