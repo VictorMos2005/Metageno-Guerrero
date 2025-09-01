@@ -74,10 +74,9 @@ In Rstudio, we can determine the levels of taxonomic diversity of the metagenome
   ### Taxonomic Analysis
 Finally we are going to create graphics using Rstudio to be able to visualize the taxonomic diversity of the relative and absolute abundance. This can also be used to explore diversities and abundances of specific families
 
-[Summary](#summary)
 ![Summary of the process](Figures/Bioinfo-summary.png)
 
-Created in  https://BioRender.com
+#### Created in  https://BioRender.com
 
 
 # Figures
