@@ -3990,9 +3990,7 @@ combined_busco_plot
 
 ## Part A
 ### We need the functional annotations file "all_annotations_trimmed.csv"
-```{r}
 
-```
 ### --- Libraries ---
 ```{r}
 library(dplyr)
