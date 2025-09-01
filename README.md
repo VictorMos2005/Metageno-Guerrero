@@ -26,6 +26,8 @@ Figures
 - [Alpha and beta diversity of Rural and Urban metagenomes.](#alpha-and-beta-diversity-of-rural-and-urban-metagenomes)
 - [Differentially abundant bacterial and eukaryotic taxa between Rural and Urban groups](#differentially-abundant-bacterial-and-eukaryotic-taxa-between-rural-and-urban-groups)
 - [Mean relative abundance of the most prevalent bacterial and eukaryotic genera in rural and urban samples](#mean-relative-abundance-of-the-most-prevalent-bacterial-and-eukaryotic-genera-in-rural-and-urban-samples)
+- [Volcano garphs]
+  - [Setup](#setup)
 
 ---
 
@@ -2571,4 +2573,352 @@ final_fig5
  
  final_fig
  
+```
+
+# Volcano graphs
+
+## Setup
+
+
+```{r}
+
+suppressPackageStartupMessages({
+  library(dplyr); library(tidyr); library(stringr)
+  library(ggplot2); library(readr); library(purrr); library(tibble)
+})
+
+set.seed(1234)
+
+```
+### ================== PARAMETERS ==================
+```{r}
+PSEUDO      <- 1e-8 # to avoid log2(0) and division by 0
+ALPHA_Q     <- 0.05 # FDR threshold
+MIN_PREV    <- 0.10 # minimum prevalence (≥10% of samples with >0) to keep a genus
+LABEL_TOP_N <- 15 # how many labels to put on the volcano (per signal)
+OUT_PREFIX  <- "volcano_Rural_vs_Urban"
+
+```
+### ============== CHECKS & PREPARATION ==============
+```{r}
+stopifnot(exists("kaiju_merged"))
+
+dat0 <- kaiju_merged %>% as_tibble()
+
+```
+### Ensure minimum types/columns
+```{r}
+need_cols <- c("file_base","Group","Domain","Genus","reads")
+if (!all(need_cols %in% names(dat0))) {
+```
+### try to split taxon_name if Domain/Genus/Phylum missing
+```{r}
+  if ("taxon_name" %in% names(dat0)) {
+    dat0 <- dat0 %>%
+      tidyr::separate(
+        taxon_name,
+        into = c("Organism","Domain","Supergroup","Kingdom","Phylum","Class",
+                 "Subclass","Order","Family","Genus","Species"),
+        sep = ";", fill = "right", extra = "drop", remove = FALSE
+      )
+  }
+}
+stopifnot(all(need_cols %in% names(dat0)))
+
+```
+### Normalize basic content
+```{r}
+dat0 <- dat0 %>%
+  mutate(
+    Group  = case_when(Group %in% c("Rural","Urban") ~ Group, TRUE ~ NA_character_),
+    Domain = str_trim(Domain),
+    Genus  = str_trim(Genus),
+    reads  = suppressWarnings(as.numeric(reads))
+  ) %>%
+  filter(!is.na(Group), !is.na(Domain), !is.na(Genus), !is.na(reads))
+
+```
+### Exclude Homo and empty entries
+```{r}
+dat0 <- dat0 %>%
+  filter(!(Domain == "Eukaryota" & Genus %in% c("Homo","Homo sapiens"))) %>%
+  filter(Genus != "")
+
+```
+### If Phylum exists, exclude Chordata in Eukaryota
+```{r}
+if ("Phylum" %in% names(dat0)) {
+  dat0 <- dat0 %>%
+    mutate(Phylum = str_trim(Phylum)) %>%
+    filter(!(Domain == "Eukaryota" & Phylum == "Chordata"))
+} else if ("taxon_name" %in% names(dat0)) {
+```
+### extract Phylum from taxon_name if not already separated above (for safety)
+```{r}
+  if (!"Phylum" %in% names(dat0)) {
+    dat0 <- dat0 %>%
+      tidyr::separate(
+        taxon_name,
+        into = c("Organism","Domain2","Supergroup","Kingdom","Phylum","Class",
+                 "Subclass","Order","Family","Genus2","Species"),
+        sep = ";", fill = "right", extra = "drop", remove = FALSE
+      ) %>%
+      mutate(Phylum = ifelse(is.na(Phylum), "", Phylum)) %>%
+      select(-Domain2, -Genus2)
+  }
+  dat0 <- dat0 %>%
+    filter(!(Domain == "Eukaryota" & Phylum == "Chordata"))
+}
+
+```
+### Keep only Bacteria and Eukaryota
+```{r}
+dat0 <- dat0 %>% filter(Domain %in% c("Bacteria","Eukaryota"))
+
+```
+### =========== Relative abundance within DOMAIN per sample ===========
+### total reads per sample and domain
+```{r}
+totals_domain <- dat0 %>%
+  group_by(file_base, Domain) %>%
+  summarise(total_reads_domain = sum(reads, na.rm = TRUE), .groups = "drop")
+
+genus_reads <- dat0 %>%
+  group_by(file_base, Group, Domain, Genus) %>%
+  summarise(reads = sum(reads, na.rm = TRUE), .groups = "drop") %>%
+  left_join(totals_domain, by = c("file_base","Domain")) %>%
+  mutate(rel_abund = if_else(total_reads_domain > 0, reads / total_reads_domain, 0)) %>%
+  ungroup()
+
+```
+### =========== Prevalence filter for robustness ===========
+### Prevalence = fraction of samples with rel_abund > 0 (in any of the groups)
+```{r}
+prev_tbl <- genus_reads %>%
+  group_by(Domain, Genus) %>%
+  summarise(prev = mean(rel_abund > 0), .groups = "drop")
+
+keepers <- prev_tbl %>%
+  filter(prev >= MIN_PREV) %>%
+  select(Domain, Genus)
+
+genus_reads_f <- genus_reads %>%
+  inner_join(keepers, by = c("Domain","Genus"))
+
+```
+### =========== Statistical function by domain ===========
+```{r}
+test_by_domain <- function(df_domain, domain_label) {
+```
+### long table per sample
+### Wilcoxon by genus: Rural vs Urban on relative abundances (within domain)
+```{r}
+  test_tbl <- df_domain %>%
+    group_by(Genus) %>%
+    summarise(
+      n_Rural = sum(Group == "Rural"),
+      n_Urban = sum(Group == "Urban"),
+      mean_Rural = mean(rel_abund[Group == "Rural"], na.rm = TRUE),
+      mean_Urban = mean(rel_abund[Group == "Urban"], na.rm = TRUE),
+      log2FC = log2((mean_Rural + PSEUDO) / (mean_Urban + PSEUDO)),
+      p = tryCatch(
+        {
+          x <- rel_abund[Group == "Rural"]
+          y <- rel_abund[Group == "Urban"]
+          if (length(x) >= 2 && length(y) >= 2 && (sd(x) > 0 || sd(y) > 0)) {
+            wilcox.test(x, y, exact = FALSE)$p.value
+          } else { NA_real_ }
+        },
+        error = function(e) NA_real_
+      ),
+      .groups = "drop"
+    ) %>%
+    mutate(
+      q = p.adjust(p, method = "BH"),
+      negLog10Q = -log10(pmax(q, .Machine$double.xmin)),
+      Domain = domain_label
+    ) %>%
+    arrange(q, desc(abs(log2FC)))
+  
+  test_tbl
+}
+
+```
+### Split by domain and test
+```{r}
+res_bact <- genus_reads_f %>% filter(Domain == "Bacteria")  %>% test_by_domain("Bacteria")
+res_euk  <- genus_reads_f %>% filter(Domain == "Eukaryota") %>% test_by_domain("Eukaryota")
+
+```
+### =========== (OPTIONAL) ZicoSeq if available ===========
+```{r}
+run_zicoseq_safe <- function(df_domain, domain_label) {
+  if (!requireNamespace("ZicoSeq", quietly = TRUE)) return(NULL)
+```
+### Build count matrix per sample × genus and metadata with Group
+```{r}
+  mat <- df_domain %>%
+    select(file_base, Genus, reads, Group) %>%
+    group_by(file_base, Genus, Group) %>%
+    summarise(reads = sum(reads), .groups = "drop") %>%
+    pivot_wider(names_from = Genus, values_from = reads, values_fill = 0)
+  if (nrow(mat) < 4) return(NULL)
+  meta <- mat %>% select(file_base, Group)
+  counts <- mat %>% select(-file_base, -Group) %>% as.data.frame()
+  rownames(counts) <- mat$file_base
+```
+### Run ZicoSeq (simple Group model)
+```{r}
+  zres <- tryCatch(
+    ZicoSeq::ZicoSeq(
+      feature.dat = t(counts),
+      meta.dat    = meta,
+      grp        = "Group",
+      adj.method = "BH",
+      n.perm.max = 1000,
+      msg        = FALSE
+    ),
+    error = function(e) NULL
+  )
+  if (is.null(zres)) return(NULL)
+  out <- tibble(
+    Genus    = rownames(zres$raw.pval),
+    p_zico   = as.numeric(zres$raw.pval[,1]),
+    q_zico   = as.numeric(zres$adj.pval[,1]),
+    stat_zico= as.numeric(zres$stat[,1]),
+    Domain   = domain_label
+  )
+  out
+}
+
+z_bact <- run_zicoseq_safe(dat0 %>% filter(Domain=="Bacteria"),  "Bacteria")
+z_euk  <- run_zicoseq_safe(dat0 %>% filter(Domain=="Eukaryota"), "Eukaryota")
+
+```
+### Merge (if present) for reference; does not change main volcano (Wilcoxon)
+```{r}
+if (!is.null(z_bact)) {
+  res_bact <- res_bact %>%
+    left_join(z_bact %>% select(Genus, p_zico, q_zico, stat_zico), by = "Genus")
+}
+if (!is.null(z_euk)) {
+  res_euk <- res_euk %>%
+    left_join(z_euk %>% select(Genus, p_zico, q_zico, stat_zico), by = "Genus")
+}
+
+```
+### =========== Save tables ===========
+```{r}
+readr::write_tsv(res_bact, paste0(OUT_PREFIX, "_Bacteria_stats.tsv"))
+readr::write_tsv(res_euk,  paste0(OUT_PREFIX, "_Eukaryota_stats.tsv"))
+
+```
+### =========== Volcano plot helper ===========
+```{r}
+volcano_plot <- function(df_stats, title_txt, out_png) {
+  df_stats <- df_stats %>%
+    mutate(sig = ifelse(q <= ALPHA_Q, "FDR ≤ 0.05", "NS"))
+  
+```
+### choose labels: the most significant + highest |log2FC|
+```{r}
+  lab_df <- df_stats %>%
+    arrange(q, desc(abs(log2FC))) %>%
+    slice_head(n = LABEL_TOP_N)
+  
+  p <- ggplot(df_stats, aes(x = log2FC, y = negLog10Q)) +
+    geom_point(aes(shape = sig), alpha = 0.8, size = 2.2) +
+    geom_hline(yintercept = -log10(ALPHA_Q), linetype = "dashed") +
+    geom_vline(xintercept = 0, linetype = "dotted") +
+    ggrepel::geom_text_repel(
+      data = lab_df,
+      aes(label = Genus),
+      size = 3,
+      max.overlaps = Inf,
+      box.padding = 0.4, min.segment.length = 0
+    ) +
+    labs(
+      title = title_txt,
+      x = "log2 Fold-Change (Rural / Urban)",
+      y = expression(-log[10]("FDR (BH)")),
+      shape = NULL
+    ) +
+    theme_bw(base_size = 12) +
+    theme(
+      plot.title = element_text(face = "bold"),
+      legend.position = "top"
+    )
+  
+  ggsave(out_png, p, width = 8, height = 6, dpi = 300)
+  message("Volcano guardado: ", out_png)
+  invisible(p)
+}
+
+```
+### =========== Draw volcano plots ===========
+```{r}
+volcano_plot(res_bact, "Bacteria — Rural vs Urban", paste0(OUT_PREFIX, "_Bacteria.png"))
+volcano_plot(res_euk,  "Eukaryota (sin Chordata) — Rural vs Urban", paste0(OUT_PREFIX, "_Eukaryota.png"))
+
+message("Listo. Archivos generados:\n - ", OUT_PREFIX, "_Bacteria_stats.tsv",
+        "\n - ", OUT_PREFIX, "_Eukaryota_stats.tsv",
+        "\n - ", OUT_PREFIX, "_Bacteria.png",
+        "\n - ", OUT_PREFIX, "_Eukaryota.png")
+
+
+
+
+volcano_plot <- function(df_stats, title_txt, out_png) {
+  df_stats <- df_stats %>%
+    mutate(sig = ifelse(q <= ALPHA_Q, "FDR ≤ 0.05", "NS"))
+  
+```
+### top labels
+```{r}
+  lab_df <- df_stats %>%
+    arrange(q, desc(abs(log2FC))) %>%
+    slice_head(n = LABEL_TOP_N)
+  
+  p <- ggplot(df_stats, aes(x = log2FC, y = negLog10Q)) +
+    geom_point(aes(shape = sig), alpha = 0.8, size = 2.2, na.rm = TRUE) +
+    geom_hline(yintercept = -log10(ALPHA_Q), linetype = "dashed") +
+    geom_vline(xintercept = 0, linetype = "dotted") +
+    ggrepel::geom_text_repel(
+      data = lab_df,
+      aes(label = Genus),
+      size = 3,
+      max.overlaps = Inf,
+      box.padding = 0.4, min.segment.length = 0
+    ) +
+    labs(
+      title = title_txt,
+      x = "log2 Fold-Change (Rural / Urban)",
+      y = expression(-log[10]("FDR (BH)")),
+      shape = NULL
+    ) +
+    theme_bw(base_size = 12) +
+    theme(plot.title = element_text(face = "bold"),
+          legend.position = "top")
+  
+```
+### ATTEMPT 1: ragg (if installed)
+```{r}
+  if (requireNamespace("ragg", quietly = TRUE)) {
+    ragg::agg_png(out_png, width = 8, height = 6, units = "in", res = 300)
+    print(p)
+    dev.off()
+  } else {
+```
+### ATTEMPT 2: base png
+```{r}
+    png(out_png, width = 8, height = 6, units = "in", res = 300)
+    print(p)
+    dev.off()
+  }
+  
+  message("Volcano guardado: ", out_png)
+  invisible(p)
+}
+
+
 ```
