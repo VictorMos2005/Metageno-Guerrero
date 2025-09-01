@@ -29,7 +29,7 @@ Figures
 - Volcano graphs
   - [Setup](#setup)
   - [Rural vs Urban](#rural-vs-urban)
-  - [BMI<25 vs BMI≥25](#bmi<25-vs-bmi≥25)
+  - [BMI<25 vs BMI≥25](#bmi)
 
 ---
 
@@ -3258,7 +3258,7 @@ volcano_plot(res_euk,  "", paste0(OUT_PREFIX, "_Eukaryota.png"))
 
 ---------------------------------
 ```
-
+<a id="bmi"></a>
 ## BMI<25 vs BMI≥25
 ### Default device depending on environment
 ```{r}
