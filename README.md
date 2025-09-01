@@ -38,6 +38,8 @@ Figures
    - [Part C](#part-c)
 - [Functional annotation of genes from selected taxa](#functional-annotation-of-genes-from-selected-taxa)
 - [Differential enrichment of COG categories in Blautia and Clostridia between Rural and Urban groups](#diff-enr)
+- FIG 14
+- [Differential distribution of functional annotations reconstructed from high-quality metagenome-assembled genomes (MAGs)](#diff-dis)
 
 ---
 
@@ -5670,3 +5672,609 @@ euk_combined  <- wrap_plots(euk_plots,  nrow = 1, guides = "collect") &
 bact_combined
 ```
 ##### euk_combined no significant data
+
+
+FIG 14
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<a id="diff-dis"></a>
+### Differential distribution of functional annotations reconstructed from high-quality metagenome-assembled genomes (MAGs)
+
+### =========================================
+### 1. Load base annotations
+### =========================================
+```{r}
+anot <- read.csv("/home/alumno21/axel/files/all_annotations_trimmed.csv",
+                 sep = ",", stringsAsFactors = FALSE)
+
+```
+### --- Define files by group ---
+```{r}
+urban_files <- c("37082_2 # 1", "37082_1#20", "37082_1#27", "37035_2#13", "37035_1#29",
+                 "37082_2 # 14", "37035_2#12", "37035_2#6", "37082_1#17", "37035_2#14",
+                 "37082_1 # 26", "37035_1#30", "37035_1#32", "37082_1#15", "37082_2#15",
+                 "37082_1 # 13", "37035_2#10", "37082_1#31", "37035_2#17", "37035_2#8",
+                 "37035_2 # 23", "37035_2#31", "37035_2#24", "37082_2#5", "36703_3#5",
+                 "37082_1 # 10", "36703_3#7", "37082_2#9", "37082_2#3", "37035_2#2",
+                 "37035_2 # 3", "37035_2#19", "37035_2#21", "36703_3#1", "37082_1#24",
+                 "36703_3 # 2", "37035_2#4", "37035_2#15", "37035_2#18", "37035_2#28",
+                 "37082_2 # 13", "37082_1#22", "37082_1#29", "37082_1#19", "37035_2#30",
+                 "37082_1 # 16", "37035_1#31", "37035_2#7", "37082_1#30", "37035_2#16",
+                 "37082_2 # 11", "37082_1#14", "37035_2#5", "37082_2#4", "37082_1#18",
+                 "37035_2 # 1", "37082_1#23", "37082_2#12", "37082_1#11", "37082_1#12",
+                 "37035_2 # 11", "37035_2#25", "37082_1#32", "37082_1#9", "37035_2#29",
+                 "37082_1 # 21", "37082_2#2", "37035_2#27", "36703_3#3", "37082_2#6",
+                 "37035_2 # 20", "37082_2#7", "37082_2#8", "37082_2#10", "37082_1#28",
+                 "36703_3 # 10", "37035_2#9", "37082_1#25", "36703_3#8", "36703_3#9",
+                 "37035_2 # 26", "36703_3#6", "37035_2#32", "36703_3#4", "37035_2#22")
+rural_files <- c("37082_3 # 17", "37082_3#15", "37035_1#22", "36703_3#31", "37082_2#24",
+                 "36703_3 # 26", "37035_7#10", "36703_3#21", "37082_2#22", "37035_7#2",
+                 "37082_3 # 7", "37035_7#6", "37035_1#7", "37035_7#9", "37082_2#30",
+                 "37035_1 # 18", "37035_7#4", "37082_3#13", "37082_3#32", "37035_1#8",
+                 "37035_7 # 7", "37035_1#19", "37082_3#29", "37035_7#13", "37035_7#12",
+                 "37082_2 # 16", "36703_3#25", "37082_3#27", "37082_3#5", "37082_3#21",
+                 "37082_2 # 19", "37082_3#16", "37035_1#5", "37082_3#1", "37035_7#11",
+                 "37035_7 # 5", "36703_3#13", "37035_7#14", "37035_1#1", "37082_3#11",
+                 "37035_1 # 10", "37035_1#12", "37082_3#4", "36703_3#17", "36703_3#27",
+                 "37082_3 # 19", "37082_2#18", "36703_3#29", "36703_3#12", "36703_3#32",
+                 "37035_1 # 15", "37035_1#27", "37035_1#13", "37035_7#8", "37035_1#6",
+                 "37082_3 # 24", "36703_3#30", "37035_7#1", "37035_1#16", "37035_7#15",
+                 "37082_3 # 26", "37035_1#23", "37035_1#2", "37082_2#27", "37035_7#3",
+                 "37082_2 # 20", "36703_3#16", "37082_3#8", "37035_1#25", "36703_3#14",
+                 "37082_3 # 3", "37035_1#4", "37082_2#29", "37082_3#30", "37082_2#31",
+                 "37035_7 # 22", "37035_7#16", "37082_2#17", "36703_3#18", "37035_1#11",
+                 "37035_1 # 3", "37035_1#14", "37082_3#9", "36703_3#23", "37082_2#28",
+                 "37082_2 # 21", "37082_3#31", "36703_3#20", "37082_2#25", "36703_3#19",
+                 "37082_2 # 26", "37082_3#6", "37035_1#17", "37082_2#23", "36703_3#15",
+                 "36703_3 # 28", "37082_3#12", "37082_2#32", "37082_3#10", "36703_3#22",
+                 "37082_3 # 28", "36703_3#24", "37082_3#18", "37082_3#20", "37035_1#24",
+                 "37082_3 # 23", "37082_3#2", "37035_1#20", "37082_3#22", "37082_3#25",
+                 "37082_3 # 14", "37035_1#9", "36703_3#11", "37035_1#21", "37035_7#20",
+                 "37035_7 # 17", "37035_7#21", "37035_7#19", "37035_1#26", "37035_7#24",
+                 "37035_7 # 18", "37035_7#23", "37035_7#25")
+
+```
+### --- Function to classify simplified domain ---
+```{r}
+assign_domain <- function(term) {
+  term_lower <- tolower(term)
+  if (grepl("virus|myoviridae|caudovirales|podoviridae|siphoviridae|ssdna|dsdna", term_lower)) {
+    return("Viral")
+  } else if (grepl("bacteria", term_lower)) {
+    return("Bacteria")
+  } else if (grepl("archaea", term_lower)) {
+    return("Archaea")
+  } else if (grepl("eukaryota", term_lower)) {
+    return("Eukaryota")
+  } else if (term_lower == "root") {
+    return("Other")
+  } else {
+    return("Other")
+  }
+}
+
+```
+### --- Step 1: Prepare data ---
+```{r}
+anot <- anot %>%
+  filter(grepl("\\|", max_annot_lvl)) %>%
+  mutate(
+    max_annot_lvl_clean = sub(".*\\|", "", max_annot_lvl),
+    Domain_simplified = sapply(max_annot_lvl_clean, assign_domain),
+    Grupo = case_when(
+      File %in% rural_files ~ "Rural",
+      File %in% urban_files ~ "Urban",
+      TRUE ~ NA_character_
+    )
+  ) %>%
+  filter(!is.na(Grupo))
+
+```
+### =========================================
+### 2. Crear anot_with_cog
+### =========================================
+### add COG_primary column from IDs/descriptions
+```{r}
+anot_with_cog <- infer_cog_from_columns(anot)
+
+```
+### --- 1) Ensure File column ---
+```{r}
+if (!"File" %in% names(anot_with_cog)) {
+  cand_file <- intersect(c("sample","Sample","archivo","Archivo"), names(anot_with_cog))
+  if (length(cand_file) == 1) {
+    anot_with_cog <- anot_with_cog %>% rename(File = !!sym(cand_file))
+  } else {
+    stop("Column 'File' not found. Rename the sample column to 'File'.")
+  }
+}
+
+
+```
+### Normaliza valores exactos
+```{r}
+anot_with_cog <- anot_with_cog %>%
+  mutate(Grupo = ifelse(Grupo %in% c("Rural","Urban"), Grupo, NA_character_))
+
+```
+### --- 3) Ensure COG_primary (if your 'infer_cog_from_columns' has not set it yet) ---
+```{r}
+if (!"COG_primary" %in% names(anot_with_cog)) {
+  anot_with_cog <- infer_cog_from_columns(anot_with_cog)
+}
+if (!"COG_primary" %in% names(anot_with_cog)) {
+  stop("'COG_primary' still missing. Check 'infer_cog_from_columns'.")
+}
+
+```
+### --- 4) Ensure pathway column (metabolic_pathways or kegg_pathway_ids) ---
+### If you don't have 'metabolic_pathways' but you do have standalone KEGG IDs, build 'kegg_pathway_ids'
+```{r}
+if (!("metabolic_pathways" %in% names(anot_with_cog) || "kegg_pathway_ids" %in% names(anot_with_cog))) {
+```
+### Try extracting 'mapXXXXX' from multiple candidate columns
+```{r}
+  cand_cols <- intersect(
+    c("KEGG_Pathway","KEGG_Module","KEGG_Reaction","KEGG_ko","BRITE",
+      "MetaCyc_Pathway","BiGG_Reaction","GOs","eggNOG_OGs","Description"),
+    names(anot_with_cog)
+  )
+  if (length(cand_cols) == 0) {
+    stop("No pathway columns found. Provide 'metabolic_pathways' or some KEGG information.")
+  }
+  extract_ids <- function(x, pattern, normalize = function(v) v) {
+    m <- stringr::str_extract_all(x, pattern)
+    vapply(m, function(v) {
+      if (length(v) == 0) return(NA_character_)
+      v <- normalize(v); v <- unique(v[nzchar(v)])
+      ifelse(length(v) > 0, paste(v, collapse = ";"), NA_character_)
+    }, character(1))
+  }
+  anot_with_cog <- anot_with_cog %>%
+    tidyr::unite(".all_text", dplyr::all_of(cand_cols), sep = " | ", remove = FALSE, na.rm = TRUE) %>%
+    mutate(
+      kegg_pathway_ids = extract_ids(.all_text, "(?i)\\b(?:map|ko)\\d{5}\\b",
+                                     function(v){ v <- tolower(v); sub("^ko","map",v) })
+    ) %>%
+    select(-.all_text)
+```
+### if nothing is available, at least create an empty column so the code does not fail
+```{r}
+  if (!"kegg_pathway_ids" %in% names(anot_with_cog)) {
+    anot_with_cog$kegg_pathway_ids <- NA_character_
+  }
+}
+
+```
+### --- 5) lineage_ncbi (robust and cached) ---
+```{r}
+if (!"lineage_ncbi" %in% names(anot_with_cog)) {
+```
+### column with the name to query in NCBI
+```{r}
+  if (!"Preferred_name_ncbi" %in% names(anot_with_cog)) {
+    anot_with_cog <- anot_with_cog %>%
+      mutate(Preferred_name_ncbi = ifelse(grepl("\\|", Preferred_name %||% ""),
+                                          sub(".*\\|", "", Preferred_name),
+                                          Preferred_name))
+  }
+  
+```
+### name cleaner to avoid empty queries
+```{r}
+  .clean_ncbi_name <- function(x) {
+    x <- trimws(x)
+    x <- sub("^unclassified\\s+", "", x, ignore.case = TRUE)
+    x <- sub("^uncultured\\s+",   "", x, ignore.case = TRUE)
+    x <- sub("^metagenome\\s+",   "", x, ignore.case = TRUE)
+    x[!nzchar(x)] <- NA_character_
+    x
+  }
+  
+```
+### cached and error-tolerant function
+```{r}
+  ncbi_classification_cached <- function(names_vec,
+                                         ranks_keep = c("species","genus","family","order","class","phylum","superkingdom"),
+                                         cache_path = "taxize_ncbi_cache_uid.rds") {
+```
+### intenta cargar taxize; si no está, sal con NA sin romper
+```{r}
+    if (!requireNamespace("taxize", quietly = TRUE)) {
+      warning("Paquete 'taxize' no disponible; 'lineage_ncbi' se dejará como NA.")
+      return(tibble(query_name = unique(names_vec), lineage_ncbi = NA_character_))
+    }
+    library(taxize)
+    
+    nm <- unique(.clean_ncbi_name(names_vec))
+```
+### filtra vacíos, guiones, y entradas sin letras
+```{r}
+    nm <- nm[!is.na(nm) & nm != "-" & grepl("[A-Za-z]", nm)]
+    
+    cache <- if (file.exists(cache_path)) readRDS(cache_path) else list()
+    to_query <- setdiff(nm, names(cache))
+    
+    if (length(to_query) > 0) {
+      for (n in to_query) {
+```
+### protection: do not send empty queries
+```{r}
+        if (is.na(n) || !nzchar(n) || !grepl("[A-Za-z]", n)) { cache[[n]] <- NA_character_; next }
+        
+        uid <- trySuppressWarnings(get_uid(n, ask = FALSE, messages = FALSE, rows = 1))
+        if (inherits(uid, "try-error") || is.null(uid) || length(uid) == 0 || is.na(uid)) {
+          cache[[n]] <- NA_character_; next
+        }
+        
+        cl <- trySuppressWarnings(classification(uid, db = "ncbi")[[1]])
+        if (inherits(cl, "try-error") || is.null(cl)) {
+          cache[[n]] <- NA_character_; next
+        }
+        
+        cl2 <- cl[cl$rank %in% ranks_keep, , drop = FALSE]
+        cache[[n]] <- if (nrow(cl2) > 0) paste(cl2$name, collapse = ";") else NA_character_
+        
+```
+### optional, be polite with NCBI
+### Sys.sleep(0.2)
+```{r}
+      }
+      saveRDS(cache, cache_path)
+    }
+    
+    tibble(query_name = names(cache), lineage_ncbi = unname(unlist(cache)))
+  }
+  
+```
+### silent helpers
+```{r}
+  trySuppressWarnings <- function(expr) suppressWarnings(try(expr, silent = TRUE))
+  
+```
+### run the function (with global failure handling)
+```{r}
+  lin_tbl <- trySuppressWarnings(
+    ncbi_classification_cached(anot_with_cog$Preferred_name_ncbi)
+  )
+  
+  if (inherits(lin_tbl, "try-error") || is.null(lin_tbl)) {
+    warning("Could not retrieve NCBI taxonomy; 'lineage_ncbi' will remain as NA.")
+    anot_with_cog$lineage_ncbi <- NA_character_
+  } else {
+    anot_with_cog <- anot_with_cog %>%
+      left_join(lin_tbl, by = c("Preferred_name_ncbi" = "query_name"))
+  }
+}
+
+```
+### --- 6) Domain_simplified (if missing) ---
+```{r}
+if (!"Domain_simplified" %in% names(anot_with_cog)) {
+  anot_with_cog <- anot_with_cog %>%
+    mutate(Domain_simplified = case_when(
+      str_detect(lineage_ncbi %||% "", "(?i)(^|;)Bacteria(;|$)")   ~ "Bacteria",
+      str_detect(lineage_ncbi %||% "", "(?i)(^|;)Eukaryota(;|$)")  ~ "Eukaryota",
+      TRUE ~ NA_character_
+    ))
+}
+
+```
+### --- 7) Minimal final cleaning ---
+### Ensure that Group only has Rural/Urban and remove rows without these groups
+```{r}
+anot_with_cog <- anot_with_cog %>% filter(Grupo %in% c("Rural","Urban"))
+
+```
+### =========================================
+### Librerías
+### =========================================
+```{r}
+suppressPackageStartupMessages({
+  library(dplyr); library(tidyr); library(stringr); library(purrr)
+  library(ggplot2); library(ggrepel); library(forcats)
+})
+
+```
+### =========================================
+### Helpers básicos + núcleo de análisis
+### =========================================
+```{r}
+
+.col_or_stop <- function(df, candidates, must = TRUE) {
+  hit <- intersect(candidates, names(df))
+  if (!length(hit)) { if (must) stop("No encuentro: ", paste(candidates, collapse=", ")); return(NA_character_) }
+  hit[[1]]
+}
+
+.detect_taxa_any <- function(lineage_vec, taxa) {
+  if (!length(lineage_vec)) return(logical(0))
+  safe <- ifelse(is.na(lineage_vec), "", lineage_vec)
+  pat  <- paste0("(^|;)", taxa, "(;|$)")
+  stringr::str_detect(safe, regex(pat, ignore_case = TRUE))
+}
+
+.separate_ids <- function(df, colname) {
+  df %>%
+    filter(!is.na(.data[[colname]]), .data[[colname]] != "", .data[[colname]] != "-") %>%
+    mutate(.raw = .data[[colname]]) %>%
+    tidyr::separate_rows(.raw, sep = "\\s*;\\s*") %>%
+    mutate(path_id = str_trim(.raw)) %>%
+    filter(path_id != "") %>%
+    select(-.raw)
+}
+
+.fisher_p <- function(a, A, b, B) {
+  if (any(is.na(c(a,A,b,B)))) return(NA_real_)
+  mat <- matrix(c(a, A-a, b, B-b), nrow=2, byrow=TRUE)
+  suppressWarnings(stats::fisher.test(mat)$p.value)
+}
+
+```
+### ---- Pathway table per microorganism (presence/absence per file) ----
+```{r}
+analyze_paths_for_micro <- function(anot,
+                                    taxa,
+                                    cog_keep = NULL, # p.ej. "V" o "LA"
+                                    domain_hint = c("Bacteria","Eukaryota"),
+                                    microorganism_label = taxa,
+                                    min_files_per_group = 1,
+                                    drop_overview = c("map01100","map00000")) {
+  
+  col_file    <- .col_or_stop(anot, c("File"))
+  col_group   <- .col_or_stop(anot, c("Grupo","Group"))
+  col_domain  <- .col_or_stop(anot, c("Domain_simplified","domain"))
+  col_lineage <- .col_or_stop(anot, c("lineage_ncbi","lineage"))
+  col_cog     <- .col_or_stop(anot, c("COG_primary","primary_cog"), must = FALSE)
+  col_path    <- .col_or_stop(anot, c("metabolic_pathways","kegg_pathway_ids","path_id"))
+  
+  df0 <- anot %>%
+    filter(.data[[col_domain]] %in% domain_hint) %>%
+    filter(.detect_taxa_any(.data[[col_lineage]], taxa))
+  
+  if (!is.null(cog_keep)) {
+    if (is.na(col_cog)) stop("No COG column (COG_primary) found to apply the filter.")
+    keep_letters <- strsplit(cog_keep, "")[[1]]
+    df0 <- df0 %>% filter(.data[[col_cog]] %in% keep_letters)
+  }
+  
+  sub_paths <- df0 %>%
+    .separate_ids(col_path) %>%
+    distinct(File = .data[[col_file]], Grupo = .data[[col_group]], path_id)
+  
+  if (length(drop_overview)) {
+    sub_paths <- sub_paths %>% filter(!path_id %in% drop_overview)
+  }
+  
+  if (nrow(sub_paths) == 0) {
+    warning("No pathways for: ", microorganism_label)
+    return(tibble())
+  }
+  
+  files_per_group <- anot %>%
+    distinct(File = .data[[col_file]], Grupo = .data[[col_group]]) %>%
+    count(Grupo, name = "n_files_group")
+  
+  counts <- sub_paths %>%
+    count(Grupo, path_id, name = "files_with") %>%
+    tidyr::complete(Grupo = unique(files_per_group$Grupo), path_id, fill = list(files_with = 0L)) %>%
+    left_join(files_per_group, by = "Grupo")
+  
+  wide <- counts %>%
+    pivot_wider(names_from = Grupo, values_from = c(files_with, n_files_group), values_fill = 0)
+  
+  for (nm in c("files_with_Rural","files_with_Urban","n_files_group_Rural","n_files_group_Urban"))
+    if (!nm %in% names(wide)) wide[[nm]] <- 0L
+  
+  res <- wide %>%
+    transmute(
+      path_id,
+      files_with_Rural = files_with_Rural,
+      files_with_Urban = files_with_Urban,
+      n_files_Rural    = n_files_group_Rural,
+      n_files_Urban    = n_files_group_Urban,
+      prev_Rural       = ifelse(n_files_Rural>0, files_with_Rural/n_files_Rural, NA_real_),
+      prev_Urban       = ifelse(n_files_Urban>0, files_with_Urban/n_files_Urban, NA_real_),
+      prev_Rural_pct   = 100*prev_Rural,
+      prev_Urban_pct   = 100*prev_Urban,
+      delta_pp         = prev_Urban_pct - prev_Rural_pct,
+      p = mapply(.fisher_p,
+                 a = files_with_Urban, A = n_files_Urban,
+                 b = files_with_Rural, B = n_files_Rural),
+      Microorganism = microorganism_label,
+      domain_type   = domain_hint[[1]]
+    ) %>%
+    filter(files_with_Rural >= min_files_per_group | files_with_Urban >= min_files_per_group) %>%
+    mutate(
+      q = p.adjust(p, method = "BH"),
+      enriched = case_when(
+        is.na(delta_pp) ~ "Tie",
+        delta_pp > 0    ~ "Urban",
+        delta_pp < 0    ~ "Rural",
+        TRUE            ~ "Tie"
+      )
+    )
+  
+  res
+}
+
+```
+### =========================================
+### Build subsets (Blautia, Clostridia, Ascomycota)
+### and merge into volcano_df
+### =========================================
+```{r}
+
+res_blautia <- analyze_paths_for_micro(
+  anot_with_cog, taxa = "Blautia",   cog_keep = "V",
+  domain_hint = "Bacteria", microorganism_label = "Blautia · COG V",
+  min_files_per_group = 1
+)
+
+res_clostridia <- analyze_paths_for_micro(
+  anot_with_cog, taxa = "Clostridia", cog_keep = "LA",
+  domain_hint = "Bacteria", microorganism_label = "Clostridia · COG L/A",
+  min_files_per_group = 1
+)
+
+res_ascomycota <- analyze_paths_for_micro(
+  anot_with_cog, taxa = "Ascomycota", cog_keep = NULL,
+  domain_hint = "Eukaryota", microorganism_label = "Ascomycota",
+  min_files_per_group = 1
+)
+
+volcano_df <- bind_rows(res_blautia, res_clostridia, res_ascomycota) %>%
+  mutate(q_global = p.adjust(p, method = "BH"))
+
+```
+### =========================================
+### Plotting function and final plot
+### =========================================
+```{r}
+
+suppressPackageStartupMessages({
+  library(dplyr); library(ggplot2); library(ggrepel); library(forcats)
+})
+
+plot_volcano_all <- function(df_all,
+                             label_top_frac = 0.15, # etiqueta solo el top 15%
+                             p_for_y = c("q_global","q_micro","p_raw"),
+                             point_size = 3, label_size = 1.6) {
+  
+  p_for_y <- match.arg(p_for_y)
+  
+  dfp <- df_all %>%
+    mutate(
+      p_raw    = p,
+      q_micro  = q,
+      q_global = ifelse(is.na(q_global), p.adjust(p_raw, method = "BH"), q_global),
+      yval = dplyr::case_when(
+        p_for_y == "q_global" ~ -log10(q_global),
+        p_for_y == "q_micro"  ~ -log10(q_micro),
+        TRUE                  ~ -log10(p_raw)
+      ),
+```
+### mantener etiquetas originales para tablas, pero crear nombre simple para la leyenda
+```{r}
+      Microorganism = factor(Microorganism,
+                             levels = c("Blautia · COG V","Clostridia · COG L/A","Ascomycota")),
+      Micro_simple  = fct_recode(Microorganism,
+                                 "Blautia"    = "Blautia · COG V",
+                                 "Clostridia" = "Clostridia · COG L/A",
+                                 "Ascomycota" = "Ascomycota"),
+      enriched = factor(enriched, levels = c("Rural","Urban","Tie"))
+    )
+  
+```
+### Top 15% por evidencia (yval alto = q pequeño)
+```{r}
+  n_lab  <- max(1, floor(nrow(dfp) * label_top_frac))
+  lab_df <- dfp %>% arrange(desc(yval)) %>% slice_head(n = n_lab)
+  
+```
+### Paletas (formas con relleno; “Tie” en gris pero fuera de la leyenda)
+```{r}
+  fill_cols <- c(Rural = " # E9B44C", Urban = "#4F86C6", Tie = "grey70")
+  shp_vals  <- c("Blautia" = 21, "Clostridia" = 22, "Ascomycota" = 24)
+  
+  ggplot(dfp, aes(x = delta_pp, y = yval)) +
+    geom_hline(yintercept = -log10(0.05), linetype = 2, linewidth = 0.3) +
+    geom_vline(xintercept = 0,         linetype = 2, linewidth = 0.3) +
+    geom_point(aes(shape = Micro_simple, fill = enriched),
+               size = point_size, stroke = 0.3, color = "black", alpha = 0.8) +
+    scale_shape_manual(values = shp_vals, name = "Taxa") +
+    scale_fill_manual(
+      values = fill_cols,
+      breaks = c("Rural","Urban"), # oculta "Tie" en la leyenda
+      name   = "Group",
+      guide  = guide_legend(override.aes = list(shape = 21, color = "black"))
+    )+
+    labs(
+      x = "Data distribuition",
+      y = "−log10(q) (Benjamini–Hochberg)",
+      title = ""
+    ) +
+    theme_classic(base_size = 9) +
+    theme(legend.position = "right",
+          plot.margin = margin(8,12,8,8)) +
+    ggrepel::geom_text_repel(
+      data = lab_df,
+      aes(label = path_id),
+      size = label_size,
+      min.segment.length = 0,
+      segment.size = 0.2,
+      box.padding = 0.12,
+      point.padding = 0.15,
+      force = 3, force_pull = 2,
+      max.overlaps = Inf,
+      seed = 1,
+      direction = "both"
+    )
+}
+
+```
+### === Plot ===
+```{r}
+p <- plot_volcano_all(
+  volcano_df,
+  label_top_frac = 0.15, p_for_y = "q_global",
+  point_size = 2.6, label_size = 1.4
+)
+print(p)
+
+```
+
+
