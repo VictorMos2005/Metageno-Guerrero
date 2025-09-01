@@ -31,11 +31,11 @@ Figures
   - [Rural vs Urban](#rural-vs-urban)
   - [BMI<25 vs BMI≥25](#bmi)
   - [BMI≥25 Rural vs BMI≥25 Urban](#bmiru)
-  - [BUSCO completeness assessment of MAGs](#busco-completeness-assessment-of-mags)
-  - [Functional annotation profiles of high-quality MAGs](#fun-anno)
-      - [Part A](#part-a)
-      - [Part B](#part-b)
-      - [Part C](#part-c)
+- [BUSCO completeness assessment of MAGs](#busco-completeness-assessment-of-mags)
+- [Functional annotation profiles of high-quality MAGs](#fun-anno)
+   - [Part A](#part-a)
+   - [Part B](#part-b)
+   - [Part C](#part-c)
 
 ---
 
