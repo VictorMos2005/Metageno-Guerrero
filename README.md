@@ -4694,10 +4694,9 @@ stopifnot(exists("rural_files"), exists("urban_files"))
 
 ```
 ### If anot is not yet loaded:
-### anot <- read.csv("/home/alumno21/axel/files/all_annotations_trimmed.csv",
-### sep = ",", stringsAsFactors = FALSE)
 ```{r}
-
+ anot <- read.csv("/home/alumno21/axel/files/all_annotations_trimmed.csv",
+ sep = ",", stringsAsFactors = FALSE)
 ```
 ### =========================
 ### Helpers
@@ -4973,18 +4972,14 @@ plot_euk_cog_by_taxa  <- plot_cog_stacks(euk_cog_rel,  "Eukaryota: COG distribut
 ### =========================
 ### 7) Show plots
 ### =========================
-### plot_bact_cog_by_taxa
-### plot_euk_cog_by_taxa
 ```{r}
-
-
+plot_bact_cog_by_taxa
+plot_euk_cog_by_taxa
 ```
 ### =========================
 ### 8) Improving format
 ### =========================
-```{r}
 
-```
 ### ---- Facet order (keep your chosen order) ----
 ```{r}
 bact_cog_rel <- bact_cog_rel %>%
@@ -5057,19 +5052,14 @@ plot_eukaryota_cog <- plot_cog_single_row(
 
 ```
 ### ---- Show ----
-### plot_bacteria_cog
-### plot_eukaryota_cog
 ```{r}
-
-
+plot_bacteria_cog
+plot_eukaryota_cog
 ```
 ### =========================
 ### 9) Corrections
 ### =========================
-```{r}
 
-
-```
 ### ---- Complete missing groups with zeros (so both Rural/Urban always appear) ----
 ```{r}
 complete_groups_for_plot <- function(df_rel) {
@@ -5153,8 +5143,5 @@ plot_eukaryota_cog <- plot_cog_single_row(euk_cog_rel_full, present_levels_euk, 
 ### FINAL PLOT PRESENTED AT PAPER
 ```{r}
 plot_bacteria_cog
-```
-### plot_eukaryota_cog *not presented for missing values in one of the groups
-```{r}
-
+plot_eukaryota_cog *not presented for missing values in one of the groups
 ```
