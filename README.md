@@ -2217,7 +2217,7 @@ final_fig5
                              "_kaiju.out")
  
 ```
-### --- Asignar correctamente file_base y Group ---
+### --- Assign correctly flie_base and Group ---
 ```{r}
  kaiju_merged <- kaiju_merged %>%
    mutate(
@@ -2265,7 +2265,7 @@ final_fig5
  sel_reads$Genus <- factor(sel_reads$Genus, levels = target_taxa)
  
 ```
-### --- Promedio de % por grupo (para las barras) ---
+### --- Average of % per group (for the bars)---
 ```{r}
  group_avg <- sel_reads %>%
    group_by(Group, Genus) %>%
@@ -2293,7 +2293,7 @@ final_fig5
    ))
  
 ```
-### ---- Altura para estrellas/brackets (con padding) ----
+### ----  Height of stars/brackets (with padding) ----
 ```{r}
  overall_max <- max(group_avg$mean_pct, na.rm = TRUE)
  y_pad <- overall_max * 0.06
@@ -2305,14 +2305,14 @@ final_fig5
  anno_df <- wilcox_res %>%
    left_join(anno_y, by = "Genus") %>%
    filter(stars != "")
- 
+
 ```
 ### --- Palette for Group ---
 ```{r}
  pal_group <- c(Rural = " # E9B44C", Urban = "#4F86C6")
  
 ```
-### ---------- Tema ----------
+### ---------- Theme ----------
 ```{r}
  base_theme <- theme_minimal(base_size = 11) +
    theme(
@@ -2344,7 +2344,7 @@ final_fig5
    )
  
 ```
-### --- Gráfico final con BRACKETS + estrellas ---
+### ---  Final graphic with Brackets + stars---
 ```{r}
  p_sep <- ggplot(group_avg, aes(x = Genus, y = mean_pct, fill = Group)) +
   geom_col(position = position_dodge(width = 0.8),
@@ -2402,7 +2402,7 @@ final_fig5
  })
  
 ```
-### --- Géneros seleccionados (Domain = Bacteria) ---
+### --- Selected Ggenus (Domain = Bacteria) ---
 ```{r}
  target_genera <- c("Clostridium", "Faecalibacterium", "Ruminococcus", "Prevotella", "Streptococcus")
  
@@ -2433,7 +2433,7 @@ final_fig5
  sel_reads$Genus <- factor(sel_reads$Genus, levels = target_genera)
  
 ```
-### --- Promedio por grupo (para las barras) ---
+### --- Average per group (for the bars)---
 ```{r}
  group_avg <- sel_reads %>%
    group_by(Group, Genus) %>%
@@ -2461,7 +2461,7 @@ final_fig5
    ))
 
 ```
-### ---- Altura para estrellas/brackets (con padding) ----
+### ---- Height for stars/brackets (with padding)----
 ```{r}
  overall_max <- max(group_avg$mean_pct, na.rm = TRUE)
  y_pad <- overall_max * 0.06
@@ -2475,12 +2475,12 @@ final_fig5
    filter(stars != "")
  
 ```
-### --- Colores por Group (consistentes) ---
+### --- Colores per Group (consistent) ---
 ```{r}
  pal_group <- c(Rural = " # E9B44C", Urban = "#4F86C6")
  
 ```
-### ---------- Tema ----------
+### ---------- Theme ----------
 ```{r}
  base_theme <- theme_minimal(base_size = 11) +
    theme(
@@ -2507,7 +2507,7 @@ final_fig5
      y = ypos
    )
 ```
-### --- Gráfico final (barras en paralelo + brackets + estrellas) ---
+### --- Gráfico final (barras en paralelo + brackets + estrellas) Final graphic (barrs in parallel + brackets + stars ) ---
 ```{r}
  p_sep2 <- ggplot(group_avg, aes(x = Genus, y = mean_pct, fill = Group)) +
    geom_col(position = position_dodge(width = 0.8),
