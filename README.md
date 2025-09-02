@@ -91,7 +91,7 @@ Finally we are going to create graphics using Rstudio to be able to visualize th
         library(patchwork)
 ```
 
-### 1. DATA LOADING AND CLEANING 
+#### 1. DATA LOADING AND CLEANING 
 ``` {r}
 data <- read.csv(
   file = "/home/alumno21/axel/files/data_207_3.csv",
