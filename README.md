@@ -102,7 +102,7 @@ data <- read.csv(
   na.strings = c("", "NA")
 )
 ```
-##### Remove empty columns and rows (only those completely empty)
+Remove empty columns and rows (only those completely empty)
 
 ``` {r}
 data <- data[, colSums(!is.na(data)) > 0]
