@@ -82,7 +82,7 @@ Finally we are going to create graphics using Rstudio to be able to visualize th
 <a id="pcoa"></a>
 ## PCoA in the anthropometric-demographic space and its association with BMI percentile, age group, and lifestyle
 
-####  REQUIRED LIBRARIES 
+####  Requiered labriaries
   ```{r}
         library(ggplot2)
         library(vegan)
@@ -208,6 +208,19 @@ lifestyle_counts <- data_complete %>%
 lifestyle_labels <- setNames(paste0(lifestyle_counts$Lifestyle, " (", lifestyle_counts$n, ")"), lifestyle_counts$Lifestyle)
 
 ```
+
+
+
+
+
+
+### When the paper is published, here it would appear the plot made by this code
+
+
+
+
+
+
 #### 7. 2 Plots
 It (1) creates a PCoA scatter colored by Percentil_group; (2) computes category counts for Age_group and Lifestyle on the full data to generate labeled legends; (3) plots PCoA colored by Age_group and by Lifestyle using those labels; (4) encodes Lifestyle and Percentil_group as numeric scores; and (5) computes a correlation matrix (Percentil_num, Age, Lifestyle_num) and renders a labeled heatmap with ggcorrplot.
 ```
@@ -295,6 +308,17 @@ p_corr <- ggcorrplot(
   )
 
 ```
+
+
+
+### When the paper is published, here it would appear the plot made by this code
+
+
+
+
+
+
+
 #### 9. Combine plots
 This block loads required libraries, tweaks plot margins, applies the custom theme to existing plots, and assembles them into a 2×2 composite figure with tags using patchwork. It then reads and cleans the CSV (removing empty rows/columns), derives analysis variables (re-coded age groups, a combined Gender_Lifestyle, BMI and percentile group factors), filters to complete cases, defines comparison pairs for later statistical tests, and builds label lookups that append total counts for Lifestyle and Percentil_group. Finally, it prints the combined plot.
 ```
@@ -443,6 +467,24 @@ plot1 <- ggplot(data_filtered, aes(x = BMI, fill = Lifestyle)) +
   )
 
 ```
+
+
+
+
+
+
+
+
+### When the paper is published, here it would appear the plot made by this code
+
+
+
+
+
+
+
+
+
 #### Plot 2: Age density by Percentil_group 
 This code generates a density plot of Age, filled by Percentil\_group categories (Underweight, Normal Weight, Overweight/Obesity), using custom colors and labels with counts, styled with a minimal theme and labeled axes/title.
 
@@ -573,6 +615,21 @@ combined_plot <- (plot1 | plot2)  / plot3 +
 print(combined_plot)
 
 ```
+
+
+
+
+
+### When the paper is published, here it would appear the plot made by this code
+
+
+
+
+
+
+
+
+
 #### Final Fig. 1 composed
 This code removes titles from four plots, then arranges `plot1`, `plot2`, `plot3`, and `p_lifestyle` into a 2×2 layout using `patchwork`, sets relative row heights, and adds panel tags (A, B, C, D) with custom style and position.
 
@@ -598,6 +655,26 @@ combined_plot <- (plot1 | plot2)  / (plot3 |p_lifestyle) +
 
 print(combined_plot)
 ```
+
+
+
+
+
+
+
+### When the paper is published, here it would appear the plot made by this code
+
+
+
+
+
+
+
+
+
+
+
+
 ## Alpha and beta diversity of Rural and Urban metagenomes.
 
 ### --- Libraries ---
