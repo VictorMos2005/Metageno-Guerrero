@@ -76,8 +76,6 @@ Finally we are going to create graphics using Rstudio to be able to visualize th
 
 ![Summary of the process](Figures/pipeline[2].png)
 
-#### Created in  https://BioRender.com
-
 
 # Figures
 
