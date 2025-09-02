@@ -82,15 +82,16 @@ Finally we are going to create graphics using Rstudio to be able to visualize th
 <a id="pcoa"></a>
 ## PCoA in the anthropometric-demographic space and its association with BMI percentile, age group, and lifestyle
 
-   ###  REQUIRED LIBRARIES 
-      ```{r}
+###  REQUIRED LIBRARIES 
+  ```{r}
         library(ggplot2)
         library(vegan)
         library(dplyr)
         library(ggcorrplot)
         library(patchwork)
 ```
-### --- 1. DATA LOADING AND CLEANING ---
+
+### 1. DATA LOADING AND CLEANING 
 ``` {r}
 data <- read.csv(
   file = "/home/alumno21/axel/files/data_207_3.csv",
@@ -101,18 +102,18 @@ data <- read.csv(
   na.strings = c("", "NA")
 )
 ```
-### Remove empty columns and rows (only those completely empty)
+##### Remove empty columns and rows (only those completely empty)
 
 ``` {r}
 data <- data[, colSums(!is.na(data)) > 0]
 data <- data[rowSums(is.na(data)) < ncol(data), ]
 ```
-### Numeric variables
+##### Numeric variables
 ```
 data$BMI <- as.numeric(data$BMI)
 data$Age <- as.numeric(data$Age)
 ```
-### --- 2. DERIVED VARIABLES ---
+#### 2. DERIVED VARIABLES 
 ```
 data <- data %>%
   mutate(
