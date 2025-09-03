@@ -2072,7 +2072,7 @@ final_plot <- (p1 / p2 / p3) +
 final_plot
 ```
 
-#### Differentially abundant bacterial and eukaryotic taxa between Rural and Urban groups
+### Differentially abundant bacterial and eukaryotic taxa between Rural and Urban groups
 
 #### Requiered libraries: dplyr, tidyr, stringr, ggplot2, purrr, broom
 ```{r}
@@ -2360,7 +2360,7 @@ print(plot_boxbactpred)
 
 
 
-### EUKARYOTA
+#### EUKARYOTA
 
 ####  Parameters 
 This code defines a new list of target taxa (here including orders, families, etc.) and a helper function to convert p-values into significance stars. It then counts the number of unique samples in each group (Urban and Rural) and creates labels like “Urban (n=XX)” and “Rural (n=YY)” for later use in plots or tables.
@@ -3044,7 +3044,7 @@ This code stacks the two barplots (`p_sep2` for bacterial genera and `p_sep` for
 
 
 
-# Volcano graphs
+## Volcano graphs
 
 ## Setup
 
@@ -3059,7 +3059,8 @@ suppressPackageStartupMessages({
 set.seed(1234)
 
 ```
-### ================== PARAMETERS ==================
+####  Parameters
+This block sets analysis constants, verifies the merged dataset exists, and prepares it: it ensures required columns (adding them by splitting taxon_name if needed), trims and types fields, removes invalid/missing entries, excludes human reads and Eukaryota/Chordata, and finally keeps only Bacteria and Eukaryota records for downstream analysis.
 ```{r}
 PSEUDO      <- 1e-8 # to avoid log2(0) and division by 0
 ALPHA_Q     <- 0.05 # FDR threshold
@@ -3068,19 +3069,19 @@ LABEL_TOP_N <- 15 # how many labels to put on the volcano (per signal)
 OUT_PREFIX  <- "volcano_Rural_vs_Urban"
 
 ```
-### ============== CHECKS & PREPARATION ==============
+Checks & preparation
 ```{r}
 stopifnot(exists("kaiju_merged"))
 
 dat0 <- kaiju_merged %>% as_tibble()
 
 ```
-### Ensure minimum types/columns
+Ensure minimum types/columns
 ```{r}
 need_cols <- c("file_base","Group","Domain","Genus","reads")
 if (!all(need_cols %in% names(dat0))) {
 ```
-### Try to split taxon_name if Domain/Genus/Phylum missing
+Try to split taxon_name if Domain/Genus/Phylum missing
 ```{r}
   if ("taxon_name" %in% names(dat0)) {
     dat0 <- dat0 %>%
@@ -3095,7 +3096,7 @@ if (!all(need_cols %in% names(dat0))) {
 stopifnot(all(need_cols %in% names(dat0)))
 
 ```
-### Normalize basic content
+Normalize basic content
 ```{r}
 dat0 <- dat0 %>%
   mutate(
@@ -3107,14 +3108,14 @@ dat0 <- dat0 %>%
   filter(!is.na(Group), !is.na(Domain), !is.na(Genus), !is.na(reads))
 
 ```
-### Exclude Homo and empty entries
+Exclude Homo and empty entries
 ```{r}
 dat0 <- dat0 %>%
   filter(!(Domain == "Eukaryota" & Genus %in% c("Homo","Homo sapiens"))) %>%
   filter(Genus != "")
 
 ```
-### If Phylum exists, exclude Chordata in Eukaryota
+If Phylum exists, exclude Chordata in Eukaryota
 ```{r}
 if ("Phylum" %in% names(dat0)) {
   dat0 <- dat0 %>%
@@ -3122,7 +3123,7 @@ if ("Phylum" %in% names(dat0)) {
     filter(!(Domain == "Eukaryota" & Phylum == "Chordata"))
 } else if ("taxon_name" %in% names(dat0)) {
 ```
-### Extract Phylum from taxon_name if not already separated above (for safety)
+Extract Phylum from taxon_name if not already separated above (for safety)
 ```{r}
   if (!"Phylum" %in% names(dat0)) {
     dat0 <- dat0 %>%
@@ -3140,13 +3141,15 @@ if ("Phylum" %in% names(dat0)) {
 }
 
 ```
-### Keep only Bacteria and Eukaryota
+Keep only Bacteria and Eukaryota
 ```{r}
 dat0 <- dat0 %>% filter(Domain %in% c("Bacteria","Eukaryota"))
 
 ```
-### =========== Relative abundance within DOMAIN per sample ===========
-### Total reads per sample and domain
+#### Relative abundance within DOMAIN per sample 
+Here you are computing the total read counts per sample and domain, then summarizing reads at the genus level. After that, you join the per-genus reads to the total reads of the corresponding domain, allowing you to calculate relative abundances within each domain per sample. The result (`genus_reads`) contains, for each sample–group–domain–genus combination, both raw reads and relative abundance.
+
+Total reads per sample and domain
 ```{r}
 totals_domain <- dat0 %>%
   group_by(file_base, Domain) %>%
@@ -3160,8 +3163,10 @@ genus_reads <- dat0 %>%
   ungroup()
 
 ```
-### =========== Prevalence filter for robustness ===========
-### Prevalence = fraction of samples with rel_abund > 0 (in any of the groups)
+#### Prevalence filter for robustness 
+  *Prevalence = fraction of samples with rel_abund > 0 (in any of the groups)
+  
+The script calculates the prevalence of each genus by domain, defined as the proportion of samples where the relative abundance is greater than zero. It then filters to keep only genera with a prevalence of at least 10% (the threshold defined by MIN_PREV). Finally, it creates a filtered dataset (genus_reads_f) that includes only those genera meeting this prevalence criterion.
 ```{r}
 prev_tbl <- genus_reads %>%
   group_by(Domain, Genus) %>%
@@ -3175,12 +3180,15 @@ genus_reads_f <- genus_reads %>%
   inner_join(keepers, by = c("Domain","Genus"))
 
 ```
-### =========== Statistical function by domain ===========
+#### Statistical function by domain 
+The function `test_by_domain` runs statistical tests on a domain-specific dataset and returns the results labeled with the given domain.
 ```{r}
 test_by_domain <- function(df_domain, domain_label) {
 ```
-### Long table per sample
-### Wilcoxon by genus: Rural vs Urban on relative abundances (within domain)
+#### Long table per sample
+The code runs Wilcoxon tests on each genus within bacteria and eukaryotes, comparing rural and urban groups. It reports group means, log2 fold change, p-values, and adjusted q-values, outputting results separately for bacteria (`res_bact`) and eukaryotes (`res_euk`).
+
+Wilcoxon by genus: Rural vs Urban on relative abundances (within domain)
 ```{r}
   test_tbl <- df_domain %>%
     group_by(Genus) %>%
@@ -3213,18 +3221,19 @@ test_by_domain <- function(df_domain, domain_label) {
 }
 
 ```
-### Split by domain and test
+Split by domain and test
 ```{r}
 res_bact <- genus_reads_f %>% filter(Domain == "Bacteria")  %>% test_by_domain("Bacteria")
 res_euk  <- genus_reads_f %>% filter(Domain == "Eukaryota") %>% test_by_domain("Eukaryota")
 
 ```
-### =========== (OPTIONAL) ZicoSeq if available ===========
+#### (OPTIONAL) ZicoSeq if available 
+This code safely runs ZicoSeq per domain: it builds a sample×genus count matrix with group metadata, skips execution if ZicoSeq isn’t installed or the dataset is too small, and fits a simple Group model to obtain raw/adjusted p-values and statistics. It then merges the ZicoSeq results (if available) into the existing Wilcoxon-based result tables for bacteria and eukaryotes, adding p_zico, q_zico, and stat_zico as reference columns without altering the main volcano inputs.
 ```{r}
 run_zicoseq_safe <- function(df_domain, domain_label) {
   if (!requireNamespace("ZicoSeq", quietly = TRUE)) return(NULL)
 ```
-### Build count matrix per sample × genus and metadata with Group
+Build count matrix per sample × genus and metadata with Group
 ```{r}
   mat <- df_domain %>%
     select(file_base, Genus, reads, Group) %>%
@@ -3236,7 +3245,7 @@ run_zicoseq_safe <- function(df_domain, domain_label) {
   counts <- mat %>% select(-file_base, -Group) %>% as.data.frame()
   rownames(counts) <- mat$file_base
 ```
-### Run ZicoSeq (simple Group model)
+Run ZicoSeq (simple Group model)
 ```{r}
   zres <- tryCatch(
     ZicoSeq::ZicoSeq(
@@ -3264,7 +3273,7 @@ z_bact <- run_zicoseq_safe(dat0 %>% filter(Domain=="Bacteria"),  "Bacteria")
 z_euk  <- run_zicoseq_safe(dat0 %>% filter(Domain=="Eukaryota"), "Eukaryota")
 
 ```
-### Merge (if present) for reference; does not change main volcano (Wilcoxon)
+Merge (if present) for reference; does not change main volcano (Wilcoxon)
 ```{r}
 if (!is.null(z_bact)) {
   res_bact <- res_bact %>%
@@ -3276,20 +3285,22 @@ if (!is.null(z_euk)) {
 }
 
 ```
-### =========== Save tables ===========
+#### Save tables 
 ```{r}
 readr::write_tsv(res_bact, paste0(OUT_PREFIX, "_Bacteria_stats.tsv"))
 readr::write_tsv(res_euk,  paste0(OUT_PREFIX, "_Eukaryota_stats.tsv"))
 
 ```
-### =========== Volcano plot helper ===========
+#### Volcano plot helper
+This code defines a function to generate a **volcano plot** comparing rural vs. urban groups. It highlights genera with FDR ≤ 0.05, labels the most significant or largest fold-changes, and plots log2 fold-change on the x-axis against –log10(FDR) on the y-axis. Reference lines mark thresholds, significant points are distinguished, labels are added with `geom_text_repel`, and the figure is saved as a high-resolution PNG.
+
 ```{r}
 volcano_plot <- function(df_stats, title_txt, out_png) {
   df_stats <- df_stats %>%
     mutate(sig = ifelse(q <= ALPHA_Q, "FDR ≤ 0.05", "NS"))
   
 ```
-### Choose labels: the most significant + highest |log2FC|
+Choose labels: the most significant + highest |log2FC|
 ```{r}
   lab_df <- df_stats %>%
     arrange(q, desc(abs(log2FC))) %>%
@@ -3324,7 +3335,40 @@ volcano_plot <- function(df_stats, title_txt, out_png) {
 }
 
 ```
-### =========== Draw volcano plots ===========
+
+
+
+
+
+
+
+
+
+
+
+###  When the paper is published, here it will appear the plot made by this code
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#### Draw volcano plots 
+This code generates two volcano plots—one for Bacteria and one for Eukaryota—saving them as PNGs with the given filenames, and prints a message listing the output files. It defines `volcano_plot()` to create the plot and write it to disk (using **ragg** if available, otherwise base `png()`), then returns the plot object. Note: in a fresh R session you must define `volcano_plot()` **before** calling it, or the initial two calls will error.
+
 ```{r}
 volcano_plot(res_bact, "Bacteria — Rural vs Urban", paste0(OUT_PREFIX, "_Bacteria.png"))
 volcano_plot(res_euk,  "Eukaryota (sin Chordata) — Rural vs Urban", paste0(OUT_PREFIX, "_Eukaryota.png"))
@@ -3342,7 +3386,7 @@ volcano_plot <- function(df_stats, title_txt, out_png) {
     mutate(sig = ifelse(q <= ALPHA_Q, "FDR ≤ 0.05", "NS"))
   
 ```
-### Top labels
+Top labels
 ```{r}
   lab_df <- df_stats %>%
     arrange(q, desc(abs(log2FC))) %>%
@@ -3370,7 +3414,7 @@ volcano_plot <- function(df_stats, title_txt, out_png) {
           legend.position = "top")
   
 ```
-### ATTEMPT 1: ragg (if installed)
+Attempt 1: ragg (if installed)
 ```{r}
   if (requireNamespace("ragg", quietly = TRUE)) {
     ragg::agg_png(out_png, width = 8, height = 6, units = "in", res = 300)
@@ -3378,7 +3422,7 @@ volcano_plot <- function(df_stats, title_txt, out_png) {
     dev.off()
   } else {
 ```
-### ATTEMPT 2: base png
+Attempt 2: base png
 ```{r}
     png(out_png, width = 8, height = 6, units = "in", res = 300)
     print(p)
@@ -3391,13 +3435,56 @@ volcano_plot <- function(df_stats, title_txt, out_png) {
 
 
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+###  When the paper is published, here it will appear the plot made by this code
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ## Rural vs Urban
 ```{r}
 
 rm(list = ls(envir = .GlobalEnv), envir = .GlobalEnv); invisible(gc())
 
 ```
-### --- 1. DATA LOADING AND CLEANING ---
+#### 1. Data loading and cleaning
+This code loads the merged Kaiju CSV, builds Urban/Rural filename lists, assigns each row a `file_base` and `Group`, and keeps only labeled samples. It then configures the plotting device based on whether you’re in RStudio, closes any open graphics devices, loads required libraries, and sets a fixed random seed for reproducible plots.
+
 ```{r}
 kaiju_merged <- read.csv(
   file = "/home/alumno21/axel/files/kaiju_merged_final.csv",
@@ -3409,7 +3496,7 @@ kaiju_merged <- read.csv(
 )
 
 ```
-### --- Urban and Rural lists adapted with suffix "_kaiju.out" ---
+Urban and Rural lists adapted with suffix "_kaiju.out" 
 ```{r}
 urban_files_kaiju <- paste0(c("37082_2 # 1", "37082_1#20", "37082_1#27", "37035_2#13", "37035_1#29",
                               "37082_2 # 14", "37035_2#12", "37035_2#6", "37082_1#17", "37035_2#14",
@@ -3458,7 +3545,7 @@ rural_files_kaiju <- paste0(c("37082_3 # 17", "37082_3#15", "37035_1#22", "36703
                             "_kaiju.out")
 
 ```
-### --- Correctly assign file_base and Group ---
+Correctly assign file_base and Group
 ```{r}
 kaiju_merged <- kaiju_merged %>%
   mutate(
@@ -3472,7 +3559,7 @@ kaiju_merged <- kaiju_merged %>%
   filter(!is.na(Group))
 
 ```
-### Default device depending on environment
+Default device depending on environment
 ```{r}
 if (Sys.getenv("RSTUDIO") == "1") {
   options(device = "RStudioGD")
@@ -3490,7 +3577,8 @@ suppressPackageStartupMessages({
 set.seed(1234)
 
 ```
-### ================== PARAMETERS ==================
+#### PARAMETERS 
+This sets analysis constants: a small pseudocount to avoid log/division by zero, the FDR cutoff (0.05), the minimum prevalence threshold (0.20), the number of top labels to show on the volcano (15), and the output filename prefix. Note: 0.20 equals 20% prevalence (your comment says ≥10%).
 ```{r}
 PSEUDO      <- 1e-8 # para evitar log2(0) y divisiones por 0
 ALPHA_Q     <- 0.05 # umbral FDR
@@ -3499,14 +3587,15 @@ LABEL_TOP_N <- 15 # cuántas etiquetas en el volcán
 OUT_PREFIX  <- "volcano_Rural_vs_Urban"
 
 ```
-### ============== CHECKS & PREPARATION ==============
+#### Checks & preparations
+This code validates and prepares your merged dataset for analysis. It confirms required columns exist (deriving them from `taxon_name` if needed), trims/casts fields, removes rows with missing values, excludes human reads and Eukaryota/Chordata, and keeps only Bacteria and Eukaryota records. The result (`dat0`) is a clean tibble ready for downstream stats.
 ```{r}
 stopifnot(exists("kaiju_merged"))
 
 dat0 <- kaiju_merged %>% as_tibble()
 colnames(dat0)
 ```
-### Ensure types/columns; if Domain/Genus/Phylum is missing, try from taxon_name
+Ensure types/columns; if Domain/Genus/Phylum is missing, try from taxon_name
 ```{r}
 need_cols <- c("file_base","Group","Domain","Genus","reads")
 if (!all(need_cols %in% names(dat0))) {
@@ -3523,7 +3612,7 @@ if (!all(need_cols %in% names(dat0))) {
 stopifnot(all(need_cols %in% names(dat0)))
 
 ```
-### Minimal normalization
+Minimal normalization
 ```{r}
 dat0 <- dat0 %>%
   mutate(
@@ -3535,14 +3624,14 @@ dat0 <- dat0 %>%
   filter(!is.na(Group), !is.na(Domain), !is.na(Genus), !is.na(reads))
 
 ```
-### Exclude Homo and empty entries
+Exclude Homo and empty entries
 ```{r}
 dat0 <- dat0 %>%
   filter(!(Domain == "Eukaryota" & Genus %in% c("Homo","Homo sapiens"))) %>%
   filter(Genus != "")
 
 ```
-### Exclude Chordata in Eukaryota
+Exclude Chordata in Eukaryota
 ```{r}
 if ("Phylum" %in% names(dat0)) {
   dat0 <- dat0 %>% mutate(Phylum = str_trim(Phylum)) %>%
@@ -3563,12 +3652,13 @@ if ("Phylum" %in% names(dat0)) {
 }
 
 ```
-### Keep only Bacteria and Eukaryota
+Keep only Bacteria and Eukaryota
 ```{r}
 dat0 <- dat0 %>% filter(Domain %in% c("Bacteria","Eukaryota"))
 
 ```
-### ===== Relative abundance within DOMAIN per sample =====
+### Relative abundance within DOMAIN per sample 
+It calculates genus-level reads per sample, normalizes them by total reads within each domain, and produces relative abundances for Rural and Urban groups.
 ```{r}
 totals_domain <- dat0 %>%
   group_by(file_base, Domain) %>%
@@ -3582,7 +3672,8 @@ genus_reads <- dat0 %>%
   ungroup()
 
 ```
-### ===== Global prevalence filter =====
+#### Global prevalence filter 
+This code computes genus prevalence across samples, keeps only genera present in at least the minimum prevalence threshold, and filters the dataset to retain those genera for further analysis.
 ```{r}
 prev_tbl <- genus_reads %>%
   group_by(Domain, Genus) %>%
@@ -3593,7 +3684,8 @@ keepers <- prev_tbl %>% filter(prev >= MIN_PREV) %>% select(Domain, Genus)
 genus_reads_f <- genus_reads %>% inner_join(keepers, by = c("Domain","Genus"))
 
 ```
-### ===== Test by domain (Wilcoxon R vs U on rel_abund) =====
+#### Test by domain (Wilcoxon R vs U on rel_abund) 
+This function compares Rural and Urban groups within each domain. It calculates the number of samples per group, mean relative abundance, log2 fold change, and performs a Wilcoxon test to obtain p-values. These are adjusted with the Benjamini–Hochberg method to control FDR, and results are ranked by significance and fold change. The code then produces two result tables: one for Bacteria and one for Eukaryota.
 ```{r}
 test_by_domain <- function(df_domain, domain_label) {
   df_domain %>%
@@ -3624,7 +3716,8 @@ res_bact <- genus_reads_f %>% filter(Domain == "Bacteria")  %>% test_by_domain("
 res_euk  <- genus_reads_f %>% filter(Domain == "Eukaryota") %>% test_by_domain("Eukaryota")
 
 ```
-### ===== (Optional) ZicoSeq if available: add Zico p/q columns =====
+#### (OPTIONAL) ZicoSeq if available: add Zico p/q columns 
+This code runs ZicoSeq per domain by building a sample×genus count matrix with group metadata, fitting a simple Group model (Rural vs Urban) to get raw and FDR-adjusted p-values and test statistics, and then merges those ZicoSeq results into your Wilcoxon-based tables (res_bact, res_euk) as extra reference columns (p_zico, q_zico, stat_zico).
 ```{r}
 run_zicoseq_safe <- function(df_all, domain_label) {
   if (!requireNamespace("ZicoSeq", quietly = TRUE)) return(NULL)
@@ -3660,7 +3753,8 @@ if (!is.null(z_bact)) res_bact <- res_bact %>% left_join(z_bact %>% select(Genus
 if (!is.null(z_euk))  res_euk  <- res_euk  %>% left_join(z_euk  %>% select(Genus, p_zico, q_zico, stat_zico), by = "Genus")
 
 ```
-### ===== Save tables =====
+#### Save tables 
+The code writes results to TSV files and defines a `volcano_plot()` function that makes volcano plots colored by group (Rural vs Urban) and marked by significance (FDR ≤ 0.05). Top genera are labeled with `geom_text_repel`, and reference lines show FDR and log2FC = 0.
 ```{r}
 readr::write_tsv(res_bact, paste0(OUT_PREFIX, "_Bacteria_stats.tsv"))
 readr::write_tsv(res_euk,  paste0(OUT_PREFIX, "_Eukaryota_stats.tsv"))
@@ -3702,12 +3796,12 @@ volcano_plot <- function(df_stats, title_txt, out_png) {
           legend.position = "top")
   
 ```
-### Show in the Plots panel
+#### Show in the Plots panel
 ```{r}
   print(p)
   
 ```
-### Save robustly with cairo
+#### Save robustly with cairo
 ```{r}
   tp <- if (.Platform$OS.type == "windows") "cairo-png" else "cairo"
   png(out_png, width = 8, height = 6, units = "in", res = 300, type = tp)
@@ -3718,7 +3812,7 @@ volcano_plot <- function(df_stats, title_txt, out_png) {
 }
 
 ```
-### Calls
+#### Calls
 ```{r}
 volcano_plot(res_bact, "", paste0(OUT_PREFIX, "_Bacteria.png"))
 volcano_plot(res_euk,  "", paste0(OUT_PREFIX, "_Eukaryota.png"))
@@ -3727,7 +3821,7 @@ volcano_plot(res_euk,  "", paste0(OUT_PREFIX, "_Eukaryota.png"))
 ```
 <a id="bmi"></a>
 ## BMI<25 vs BMI≥25
-### Default device depending on environment
+#### Default device depending on environment
 ```{r}
 if (Sys.getenv("RSTUDIO") == "1") {
   options(device = "RStudioGD")
@@ -3745,7 +3839,9 @@ suppressPackageStartupMessages({
 set.seed(1234)
 
 ```
-### ================== PARAMETERS ==================
+#### Parameters
+This code defines the parameters for the volcano plot analysis. A small constant (`PSEUDO`) prevents division by zero in log2 fold-change, while `ALPHA_Q` sets the false discovery rate threshold for significance. The variable `MIN_PREV` filters genera by minimum prevalence across samples, and `LABEL_TOP_N` controls how many genera are labeled on the volcano plot. Finally, `OUT_PREFIX` specifies the filename prefix for the output files, here `"volcano_BMI_groups"`.
+
 ```{r}
 PSEUDO      <- 1e-8 # to avoid log2(0) and divisions by 0
 ALPHA_Q     <- 0.05 # FDR threshold
@@ -3754,14 +3850,16 @@ LABEL_TOP_N <- 15 # how many labels on the volcano plot
 OUT_PREFIX  <- "volcano_BMI_groups"
 
 ```
-### ============== CHECKS & PREPARATION ==============
+#### CHECKS & PREPARATION Checks & preparations
+This block validates and cleans the input for a BMI-based analysis. It ensures required columns exist (deriving them from `taxon_name` if needed), coerces types, keeps only rows with valid `BMI_group` (BMI<25 or BMI≥25), trims strings, removes empty/NA entries, excludes human reads and Eukaryota/Chordata, and finally retains only Bacteria and Eukaryota records in `dat0` for downstream testing.
+
 ```{r}
 stopifnot(exists("kaiju_merged"))
 
 dat0 <- kaiju_merged %>% as_tibble()
 
 ```
-### Ensure types/columns; if Domain/Genus/Phylum is missing, try from taxon_name
+Ensure types/columns; if Domain/Genus/Phylum is missing, try from taxon_name
 ```{r}
 need_cols <- c("file_base","BMI_group","Domain","Genus","reads")
 if (!all(need_cols %in% names(dat0))) {
@@ -3778,7 +3876,7 @@ if (!all(need_cols %in% names(dat0))) {
 stopifnot(all(need_cols %in% names(dat0)))
 
 ```
-### Minimal normalization
+Minimal normalization
 ```{r}
 dat0 <- dat0 %>%
   mutate(
@@ -3793,14 +3891,14 @@ dat0 <- dat0 %>%
   filter(!is.na(BMI_group), !is.na(Domain), !is.na(Genus), !is.na(reads))
 
 ```
-### Exclude Homo and empty entries
+Exclude Homo and empty entries
 ```{r}
 dat0 <- dat0 %>%
   filter(!(Domain == "Eukaryota" & Genus %in% c("Homo","Homo sapiens"))) %>%
   filter(Genus != "")
 
 ```
-### Exclude Chordata in Eukaryota
+Exclude Chordata in Eukaryota
 ```{r}
 if ("Phylum" %in% names(dat0)) {
   dat0 <- dat0 %>% mutate(Phylum = str_trim(Phylum)) %>%
@@ -3821,12 +3919,14 @@ if ("Phylum" %in% names(dat0)) {
 }
 
 ```
-### Keep only Bacteria and Eukaryota
+Keep only Bacteria and Eukaryota
 ```{r}
 dat0 <- dat0 %>% filter(Domain %in% c("Bacteria","Eukaryota"))
 
 ```
-### ===== Relative abundance within DOMAIN per sample =====
+#### Relative abundance within DOMAIN per sample 
+Here you calculate total reads per sample and domain, then compute genus-level abundances. The first step (`totals_domain`) sums reads for each sample and domain. The second step (`genus_reads`) sums reads per sample, BMI group, domain, and genus, joins the domain totals, and normalizes to relative abundances (`rel_abund`). The result is a genus-level abundance table adjusted within each domain.
+
 ```{r}
 totals_domain <- dat0 %>%
   group_by(file_base, Domain) %>%
@@ -3840,7 +3940,9 @@ genus_reads <- dat0 %>%
   ungroup()
 
 ```
-### ===== Global prevalence filter =====
+#### Global prevalence filter 
+This code keeps only genera with prevalence above the threshold, filtering out rare taxa for downstream analysis.
+
 ```{r}
 prev_tbl <- genus_reads %>%
   group_by(Domain, Genus) %>%
@@ -3851,7 +3953,9 @@ keepers <- prev_tbl %>% filter(prev >= MIN_PREV) %>% select(Domain, Genus)
 genus_reads_f <- genus_reads %>% inner_join(keepers, by = c("Domain","Genus"))
 
 ```
-### ===== Test by domain (Wilcoxon BMI<25 vs BMI≥25 on rel_abund) =====
+#### Test by domain (Wilcoxon BMI<25 vs BMI≥25 on rel_abund) 
+It compares each genus’s relative abundance between **BMI<25** and **BMI≥25** within a given domain using a Wilcoxon test, computing group counts, group means, log2 fold change (BMI<25 / BMI≥25), p-values, BH-adjusted q-values, and −log10(q), then sorts by significance and effect size. The function is run separately for Bacteria and Eukaryota to produce two result tables.
+
 ```{r}
 test_by_domain <- function(df_domain, domain_label) {
   df_domain %>%
@@ -3883,7 +3987,7 @@ res_bact <- genus_reads_f %>% filter(Domain == "Bacteria")  %>% test_by_domain("
 res_euk  <- genus_reads_f %>% filter(Domain == "Eukaryota") %>% test_by_domain("Eukaryota")
 
 ```
-### ===== (Optional) ZicoSeq if available: add Zico p/q columns =====
+#### (OPTIONAL) ZicoSeq if available: add Zico p/q columns 
 ```{r}
 run_zicoseq_safe <- function(df_all, domain_label) {
   if (!requireNamespace("ZicoSeq", quietly = TRUE)) return(NULL)
@@ -3919,13 +4023,15 @@ if (!is.null(z_bact)) res_bact <- res_bact %>% left_join(z_bact %>% select(Genus
 if (!is.null(z_euk))  res_euk  <- res_euk  %>% left_join(z_euk  %>% select(Genus, p_zico, q_zico, stat_zico), by = "Genus")
 
 ```
-### ===== Save tables =====
+#### Save tables 
 ```{r}
 readr::write_tsv(res_bact, paste0(OUT_PREFIX, "_Bacteria_stats.tsv"))
 readr::write_tsv(res_euk,  paste0(OUT_PREFIX, "_Eukaryota_stats.tsv"))
 
 ```
-### ===== Volcano plot (color by group with higher abundance) =====
+#### Volcano plot (color by group with higher abundance) 
+This function builds a BMI-based volcano plot: it flags significance (FDR ≤ 0.05), colors points by which group is higher (BMI<25 vs BMI≥25), labels the top genera by significance and effect size, and draws FDR/zero reference lines. It prints the plot to the viewer and also saves a 300-dpi PNG via a cairo device, then returns the ggplot object.
+
 ```{r}
 volcano_plot <- function(df_stats, title_txt, out_png) {
   df_stats <- df_stats %>%
@@ -3962,12 +4068,12 @@ volcano_plot <- function(df_stats, title_txt, out_png) {
           legend.position = "top")
   
 ```
-### Show in the Plots panel
+Show in the Plots panel
 ```{r}
   print(p)
   
 ```
-### Save robustly with cairo
+Save robustly with cairo
 ```{r}
   tp <- if (.Platform$OS.type == "windows") "cairo-png" else "cairo"
   png(out_png, width = 8, height = 6, units = "in", res = 300, type = tp)
@@ -3978,12 +4084,66 @@ volcano_plot <- function(df_stats, title_txt, out_png) {
 }
 
 ```
-### ===== Draw volcano plots =====
+
+
+
+
+
+
+
+
+
+###  When the paper is published, here it will appear the plot made by this code
+
+
+
+
+
+
+
+
+
+
+
+
+
+#### Draw volcano plots 
+Those lines generate and display volcano plots for bacteria and eukaryota by BMI group, and save them as PNG files in the working directory, showing which genera are enriched in BMI<25 or BMI≥25.
+
 ```{r}
 volcano_plot(res_bact, "", paste0(OUT_PREFIX, "_Bacteria.png"))
 volcano_plot(res_euk,  "", paste0(OUT_PREFIX, "_Eukaryota.png"))
 
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+###  When the paper is published, here it will appear the plot made by this code
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ### ===== Summary =====
 ```{r}
 message("\nResumen Bacteria: n=", nrow(res_bact),
@@ -3998,7 +4158,8 @@ message("\nListo. Archivos generados:\n - ", OUT_PREFIX, "_Bacteria_stats.tsv",
 
 <a id="bmiru"></a>
 ##  BMI≥25 Rural vs BMI≥25 Urban 
-### Default device depending on environment
+
+#### Default device depending on environment
 ```{r}
 if (Sys.getenv("RSTUDIO") == "1") {
   options(device = "RStudioGD")
@@ -4016,7 +4177,8 @@ suppressPackageStartupMessages({
 set.seed(1234)
 
 ```
-### ================== PARAMETERS ==================
+#### Parameters
+Sets the analysis parameters: a tiny pseudocount to avoid divide-by-zero, FDR significance at 0.05, a prevalence filter of 0.2 (i.e., 20%), labeling up to 8 top genera on the volcano, and the output filename prefix `"volcano_BMI26_Rural_vs_Urban"`.
 ```{r}
 PSEUDO      <- 1e-8 # to avoid log2(0) and divisions by 0
 ALPHA_Q     <- 0.05 # FDR threshold
@@ -4025,14 +4187,15 @@ LABEL_TOP_N <- 8 # how many labels on the volcano plot
 OUT_PREFIX  <- "volcano_BMI26_Rural_vs_Urban"
 
 ```
-### ============== CHECKS & PREPARATION ==============
+#### Checks & preparations
+It validates and cleans the Kaiju table for this comparison: ensures required columns (deriving from `taxon_name` if needed), standardizes types/strings, keeps rows with `context_group` equal to “BMI≥25 Rural” or “BMI≥25 Urban,” removes human/Chordata eukaryotes and empty genera, and retains only Bacteria and Eukaryota for downstream analysis.
 ```{r}
 stopifnot(exists("kaiju_merged"))
 
 dat0 <- kaiju_merged %>% as_tibble()
 
 ```
-### Ensure types/columns; if Domain/Genus/Phylum is missing, try from taxon_name
+Ensure types/columns; if Domain/Genus/Phylum is missing, try from taxon_name
 ```{r}
 need_cols <- c("file_base","context_group","Domain","Genus","reads")
 if (!all(need_cols %in% names(dat0))) {
@@ -4049,7 +4212,7 @@ if (!all(need_cols %in% names(dat0))) {
 stopifnot(all(need_cols %in% names(dat0)))
 
 ```
-### Minimal normalization
+Minimal normalization
 ```{r}
 dat0 <- dat0 %>%
   mutate(
@@ -4064,14 +4227,14 @@ dat0 <- dat0 %>%
   filter(!is.na(context_group), !is.na(Domain), !is.na(Genus), !is.na(reads))
 
 ```
-### Exclude Homo and empty entries
+Exclude Homo and empty entries
 ```{r}
 dat0 <- dat0 %>%
   filter(!(Domain == "Eukaryota" & Genus %in% c("Homo","Homo sapiens"))) %>%
   filter(Genus != "")
 
 ```
-### Exclude Chordata in Eukaryota
+Exclude Chordata in Eukaryota
 ```{r}
 if ("Phylum" %in% names(dat0)) {
   dat0 <- dat0 %>% mutate(Phylum = str_trim(Phylum)) %>%
@@ -4092,12 +4255,14 @@ if ("Phylum" %in% names(dat0)) {
 }
 
 ```
-### Keep only Bacteria and Eukaryota
+Keep only Bacteria and Eukaryota
 ```{r}
 dat0 <- dat0 %>% filter(Domain %in% c("Bacteria","Eukaryota"))
 
 ```
-### ===== Relative abundance within DOMAIN per sample =====
+#### Relative abundance within DOMAIN per sample 
+This code computes domain-level totals per sample, then calculates per-genus relative abundances within each `context_group` by dividing genus reads by the sample’s total reads for that domain, producing the `genus_reads` dataset ready for prevalence and differential analysis.
+
 ```{r}
 totals_domain <- dat0 %>%
   group_by(file_base, Domain) %>%
@@ -4111,7 +4276,7 @@ genus_reads <- dat0 %>%
   ungroup()
 
 ```
-### ===== Global prevalence filter =====
+Global prevalence filter 
 ```{r}
 prev_tbl <- genus_reads %>%
   group_by(Domain, Genus) %>%
@@ -4122,7 +4287,9 @@ keepers <- prev_tbl %>% filter(prev >= MIN_PREV) %>% select(Domain, Genus)
 genus_reads_f <- genus_reads %>% inner_join(keepers, by = c("Domain","Genus"))
 
 ```
-### ===== Test by domain (Wilcoxon BMI≥25 Rural vs Urban) =====
+#### Test by domain (Wilcoxon BMI≥25 Rural vs Urban) 
+It compares genus-level relative abundances between **BMI≥25 Rural** and **BMI≥25 Urban** within each domain. For every genus it counts group sample sizes, computes group means, calculates log2 fold change (Rural/Urban), runs a Wilcoxon test, adjusts p-values with BH to get FDR (q), adds −log10(q) and the domain label, and returns a table sorted by significance and effect size. Separate result tables are produced for Bacteria and Eukaryota.
+
 ```{r}
 test_by_domain <- function(df_domain, domain_label) {
   df_domain %>%
@@ -4154,7 +4321,7 @@ res_bact <- genus_reads_f %>% filter(Domain == "Bacteria")  %>% test_by_domain("
 res_euk  <- genus_reads_f %>% filter(Domain == "Eukaryota") %>% test_by_domain("Eukaryota")
 
 ```
-### ===== (Optional) ZicoSeq if available: add Zico p/q columns =====
+#### (OPTIONAL) ZicoSeq if available: add Zico p/q columns 
 ```{r}
 run_zicoseq_safe <- function(df_all, domain_label) {
   if (!requireNamespace("ZicoSeq", quietly = TRUE)) return(NULL)
@@ -4190,13 +4357,14 @@ if (!is.null(z_bact)) res_bact <- res_bact %>% left_join(z_bact %>% select(Genus
 if (!is.null(z_euk))  res_euk  <- res_euk  %>% left_join(z_euk  %>% select(Genus, p_zico, q_zico, stat_zico), by = "Genus")
 
 ```
-### ===== Save tables =====
+#### Save tables 
 ```{r}
 readr::write_tsv(res_bact, paste0(OUT_PREFIX, "_Bacteria_stats.tsv"))
 readr::write_tsv(res_euk,  paste0(OUT_PREFIX, "_Eukaryota_stats.tsv"))
 
 ```
-### ===== Volcano plot (color by group with higher abundance) =====
+#### Volcano plot (color by group with higher abundance) 
+Defines a function that builds a volcano plot comparing BMI≥25 Rural vs BMI≥25 Urban per genus: it flags significance (FDR ≤ 0.05), colors points by which subgroup is higher (positive log2FC = Rural; negative = Urban), labels the top genera, draws FDR/zero lines, prints the plot to the viewer, and saves a 300-dpi PNG via a cairo device.
 ```{r}
 volcano_plot <- function(df_stats, title_txt, out_png) {
   df_stats <- df_stats %>%
@@ -4233,12 +4401,12 @@ volcano_plot <- function(df_stats, title_txt, out_png) {
           legend.position = "top")
   
 ```
-### Show in the Plots panel
+Show in the Plots panel
 ```{r}
   print(p)
   
 ```
-### Save robustly with cairo
+Save robustly with cairo
 ```{r}
   tp <- if (.Platform$OS.type == "windows") "cairo-png" else "cairo"
   png(out_png, width = 8, height = 6, units = "in", res = 300, type = tp)
@@ -4249,12 +4417,71 @@ volcano_plot <- function(df_stats, title_txt, out_png) {
 }
 
 ```
-### ===== Draw volcano plots =====
+
+
+
+
+
+
+
+
+
+
+
+
+###  When the paper is published, here it will appear the plot made by this code
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#### Draw volcano plots
+These two calls render and save the BMI≥25 Rural vs Urban volcano plots for bacteria and eukaryota, displaying them in the viewer and writing high-res PNGs named `volcano_BMI26_Rural_vs_Urban_Bacteria.png` and `volcano_BMI26_Rural_vs_Urban_Eukaryota.png` in your working directory.
+
 ```{r}
 volcano_plot(res_bact, "", paste0(OUT_PREFIX, "_Bacteria.png"))
 volcano_plot(res_euk,  "", paste0(OUT_PREFIX, "_Eukaryota.png"))
 
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+###  When the paper is published, here it will appear the plot made by this code
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ### ===== Summary =====
 ```{r}
 message("\nResumen Bacteria: n=", nrow(res_bact),
@@ -4269,8 +4496,7 @@ message("\nListo. Archivos generados:\n - ", OUT_PREFIX, "_Bacteria_stats.tsv",
 ```
 
 ## BUSCO completeness assessment of MAGs
-
-#### For the comprehension of the specific demographic signatures, we recovered 713 MAGs in total by focusing on the 10 highest-read individuals for each of the ten differential lineages identified previously, five bacterial and five eukaryotic taxa (Fig. 10). Rural and Urban cohorts contributed roughly equal shares of these genomes (Fig. 10A–B). Across MAGs, single-copy BUSCOs dominated the profiles, whereas duplicated, fragmented, and missing categories formed minor fractions, yielding near-identical distributions between lifestyles (Fig. 10A vs. 10B).
+For the comprehension of the specific demographic signatures, we recovered 713 MAGs in total by focusing on the 10 highest-read individuals for each of the ten differential lineages identified previously, five bacterial and five eukaryotic taxa (Fig. 10). Rural and Urban cohorts contributed roughly equal shares of these genomes (Fig. 10A–B). Across MAGs, single-copy BUSCOs dominated the profiles, whereas duplicated, fragmented, and missing categories formed minor fractions, yielding near-identical distributions between lifestyles (Fig. 10A vs. 10B).
 
 ### Summary figure of MAGs
 ### We need the BUSCO file "tabla_busco.csv"
