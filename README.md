@@ -2052,12 +2052,12 @@ p3 <- p_pca +
     plot.margin = margin(8, 14, 8, 14)  # más aire en todos los lados
   ) +
 ```
-### more space at the edges
+More space at the edges
 ```{r}
   scale_x_continuous(expand = expansion(mult = c(0.08, 0.08))) +
   scale_y_continuous(expand = expansion(mult = c(0.08, 0.08)))
 ```
-### Final composition (vertical, breathing) 
+#### Final composition (vertical, breathing) 
 ```{r}
 final_plot <- (p1 / p2 / p3) +
   plot_layout(heights = c(1, 1, 1.3), guides = "collect") +
@@ -2517,7 +2517,8 @@ final_fig5
  
  
 ```
-### --- 1. Upload and clean the data---
+#### 1. Upload and clean the data
+This code loads the merged Kaiju data, defines Urban/Rural sample lists, assigns each row a file_base and Group, and selects a set of target taxa. It computes, per sample, the total eukaryotic reads excluding Chordata, aggregates reads for the target taxa (also excluding Chordata), pads missing taxa with zeros, and calculates each taxon’s percentage of the eukaryotic total in that sample. It then fixes the taxon order and computes group-wise mean percentages to use for bar plots.
 ```{r}
  kaiju_merged <- read.csv(
    file = "/home/alumno21/axel/files/kaiju_merged_final.csv",
@@ -2529,7 +2530,7 @@ final_fig5
  )
  
 ```
-### --- Urban and Rural list adapted with the suffix "_kaiju.out" ---
+Urban and Rural list adapted with the suffix "_kaiju.out" 
 ```{r}
  urban_files_kaiju <- paste0(c("37082_2 # 1", "37082_1#20", "37082_1#27", "37035_2#13", "37035_1#29",
                                "37082_2 # 14", "37035_2#12", "37035_2#6", "37082_1#17", "37035_2#14",
@@ -2578,7 +2579,7 @@ final_fig5
                              "_kaiju.out")
  
 ```
-### --- Assign correctly flie_base and Group ---
+Assign correctly flie_base and Group 
 ```{r}
  kaiju_merged <- kaiju_merged %>%
    mutate(
@@ -2593,12 +2594,12 @@ final_fig5
  
  
 ```
-### --- Selected taxa (level Genus) ---
+Selected taxa (level Genus) 
 ```{r}
  target_taxa <- c("Agaricales", "Chorda", "Eimeriidae", "Halteriidae", "Saccharomycetales")
  
 ```
-### --- Totals per sample (denominator): total of Eukaryota EXCLUDING Chordata ---
+Totals per sample (denominator): total of Eukaryota EXCLUDING Chordata 
 ```{r}
  totals_sample <- kaiju_merged %>%
    filter(Domain == "Eukaryota",
@@ -2607,7 +2608,7 @@ final_fig5
    summarise(total_reads = sum(reads, na.rm = TRUE), .groups = "drop")
  
 ```
-### --- Reads of the selected taxa (Genus), also EXCLUDING Chordata ---
+Reads of the selected taxa (Genus), also EXCLUDING Chordata 
 ```{r}
  sel_reads <- kaiju_merged %>%
    filter(Domain == "Eukaryota",
@@ -2621,19 +2622,22 @@ final_fig5
    mutate(pct = if_else(total_reads > 0, 100 * reads / total_reads, NA_real_))
  
 ```
-### Maintain the order of the taxons
+Maintain the order of the taxons
 ```{r}
  sel_reads$Genus <- factor(sel_reads$Genus, levels = target_taxa)
  
 ```
-### --- Average of % per group (for the bars)---
+Average of % per group (for the bars)
 ```{r}
  group_avg <- sel_reads %>%
    group_by(Group, Genus) %>%
    summarise(mean_pct = mean(pct, na.rm = TRUE), .groups = "drop")
  
 ```
-### ====================== Wilcoxon by Genus ======================
+#### Wilcoxon by Genus 
+This code computes Wilcoxon p-values per genus on percentage abundances (producing significance stars), determines y-positions for annotating those stars above the mean bars, and sets a group color palette and a clean minimal theme for plotting.
+
+Note: the Rural hex color has spaces (" # E9B44C"); change to "#E9B44C" to avoid a color parse error.
 ```{r}
  get_pval_per_genus <- function(df) {
    df <- df %>% filter(!is.na(pct))
@@ -2654,7 +2658,7 @@ final_fig5
    ))
  
 ```
-### ----  Height of stars/brackets (with padding) ----
+Height of stars/brackets (with padding) 
 ```{r}
  overall_max <- max(group_avg$mean_pct, na.rm = TRUE)
  y_pad <- overall_max * 0.06
@@ -2668,12 +2672,12 @@ final_fig5
    filter(stars != "")
 
 ```
-### --- Palette for Group ---
+Palette for Group 
 ```{r}
  pal_group <- c(Rural = " # E9B44C", Urban = "#4F86C6")
  
 ```
-### ---------- Theme ----------
+Theme 
 ```{r}
  base_theme <- theme_minimal(base_size = 11) +
    theme(
@@ -2688,15 +2692,17 @@ final_fig5
    )
  
 ```
-### ---------- Data for BRACKETS drawn by hand ----------
-### Numerical position of the genus in the x axis
+#### Data for BRACKETS drawn by hand 
+This code maps each genus to its x-axis position, then computes left/right x coordinates for Rural and Urban bars by applying a small offset so a significance bracket can be centered above the pair. It also carries over the y position at which the bracket and stars will be drawn.
+
+Numerical position of the genus in the x axis
 ```{r}
  lvl <- levels(group_avg$Genus)
  brackets_manual <- anno_df %>%
    mutate(
      gx = match(Genus, lvl),
 ```
-### Horizontal offset: center above the bars (adjust if width/dodge is changed)
+Horizontal offset: center above the bars (adjust if width/dodge is changed)
 ```{r}
      off = 0.23, # ~ Half of the space between the two bars
      x_rural = gx - off,
@@ -2705,26 +2711,27 @@ final_fig5
    )
  
 ```
-### ---  Final graphic with Brackets + stars---
+####  Final graphic with Brackets + stars
+This code builds a grouped bar chart of mean percent abundance per genus for Urban vs Rural, adds formatted percentage labels above each bar, and draws manual significance brackets with stars above each genus to mark Wilcoxon results. It customizes fill colors, uses a percent y-axis with extra headroom for the brackets, sets titles/axes, and applies a clean theme.
 ```{r}
  p_sep <- ggplot(group_avg, aes(x = Genus, y = mean_pct, fill = Group)) +
   geom_col(position = position_dodge(width = 0.8),
             width = 0.7, color = "black", linewidth = 0.2) +
 ```
-### % labels
+% labels
 ```{r}
    geom_text(aes(label = sprintf("%.3f%%", mean_pct)),
              position = position_dodge(width = 0.8),
              vjust = -0.3, size = 3, color = "black") +
 ```
-### Horizontal BRACKET (30% higher)
+Horizontal BRACKET (30% higher)
 ```{r}
    geom_segment(data = brackets_manual,
                 aes(x = x_rural, xend = x_urban,
                     y = y * 1.7, yend = y * 1.7),
                inherit.aes = FALSE, linewidth = 0.6) +
 ```
-### Bracket legs (2% below the new level)
+Bracket legs (2% below the new level)
 ```{r}
    geom_segment(data = brackets_manual,
                 aes(x = x_rural, xend = x_rural,
@@ -2735,7 +2742,7 @@ final_fig5
                     y = y * 1.7, yend = y * 1.7 - (y * 1.7 * 0.02)),
                 inherit.aes = FALSE, linewidth = 0.6) +
 ```
-### Stars (also in the new level)
+Stars (also in the new level)
 ```{r}
    geom_text(data = brackets_manual,
              aes(x = gx, y = y * 1.7, label = stars),
@@ -2752,7 +2759,9 @@ final_fig5
    base_theme
 
 ```
-### Corrected graph
+#### Corrected graph
+This code prints the eukaryotic bar chart (`p_sep`), loads helper packages, defines a set of bacterial genera of interest, computes total bacterial reads per sample, aggregates reads for the selected genera, fills missing genera with zeros, converts them to percent of each sample’s bacterial total, fixes genus order for plotting, and calculates Urban/Rural mean percentages per genus for a grouped bar chart.
+
 ```{r}
  print(p_sep)
  
@@ -2763,12 +2772,12 @@ final_fig5
  })
  
 ```
-### --- Selected Ggenus (Domain = Bacteria) ---
+Selected Ggenus (Domain = Bacteria) 
 ```{r}
  target_genera <- c("Clostridium", "Faecalibacterium", "Ruminococcus", "Prevotella", "Streptococcus")
  
 ```
-### --- Totals per sample: total of Bacteria per sample ---
+Totals per sample: total of Bacteria per sample 
 ```{r}
  totals_sample <- kaiju_merged %>%
    filter(Domain == "Bacteria") %>%
@@ -2776,7 +2785,7 @@ final_fig5
    summarise(total_reads = sum(reads, na.rm = TRUE), .groups = "drop")
  
 ```
-### --- Reads of the selected genus ---
+Reads of the selected genus 
 ```{r}
  sel_reads <- kaiju_merged %>%
    filter(Domain == "Bacteria",
@@ -2789,19 +2798,47 @@ final_fig5
    mutate(pct = if_else(total_reads > 0, 100 * reads / total_reads, NA_real_))
  
 ```
-### Order of genus on the x axis
+Order of genus on the x axis
 ```{r}
  sel_reads$Genus <- factor(sel_reads$Genus, levels = target_genera)
  
 ```
-### --- Average per group (for the bars)---
+  Average per group (for the bars)
 ```{r}
  group_avg <- sel_reads %>%
    group_by(Group, Genus) %>%
    summarise(mean_pct = mean(pct, na.rm = TRUE), .groups = "drop")
  
 ```
-### ====================== Wilcoxon by Genus ======================
+
+
+
+
+
+
+
+
+
+
+
+
+###  When the paper is published, here it will appear the plot made by this code
+
+
+
+
+
+
+
+
+
+
+
+
+
+#### Wilcoxon by Genus 
+This code computes Wilcoxon p-values per bacterial genus on percentage abundances and converts them to significance stars, determines y-positions for the annotations above the tallest bar per genus, sets a consistent color palette and minimal theme, and prepares the exact x/y coordinates for drawing manual significance brackets centered over the Urban/Rural bar pairs.
+
 ```{r}
  get_pval_per_genus <- function(df) {
    df <- df %>% filter(!is.na(pct))
@@ -2822,7 +2859,7 @@ final_fig5
    ))
 
 ```
-### ---- Height for stars/brackets (with padding)----
+Height for stars/brackets (with padding)
 ```{r}
  overall_max <- max(group_avg$mean_pct, na.rm = TRUE)
  y_pad <- overall_max * 0.06
@@ -2836,12 +2873,12 @@ final_fig5
    filter(stars != "")
  
 ```
-### --- Colores per Group (consistent) ---
+Colores per Group (consistent) 
 ```{r}
  pal_group <- c(Rural = " # E9B44C", Urban = "#4F86C6")
  
 ```
-### ---------- Theme ----------
+Theme 
 ```{r}
  base_theme <- theme_minimal(base_size = 11) +
    theme(
@@ -2856,7 +2893,7 @@ final_fig5
    )
  
 ```
-### ---------- Data for BRACKETS drawn by hand ----------
+Data for BRACKETS drawn by hand
 ```{r}
  lvl <- levels(group_avg$Genus)
  brackets_manual <- anno_df %>%
@@ -2868,7 +2905,9 @@ final_fig5
      y = ypos
    )
 ```
-### --- Gráfico final (barras en paralelo + brackets + estrellas) Final graphic (barrs in parallel + brackets + stars ) ---
+##### Final graphic (barrs in parallel + brackets + stars ) 
+This code builds and prints a grouped bar chart of mean percentage abundance per bacterial genus for Urban vs Rural samples, adds formatted percent labels above each bar, draws manual significance brackets and stars over each genus based on Wilcoxon tests, applies a custom color palette and a minimal theme, and expands the y-axis to leave room for the brackets and annotations.
+
 ```{r}
  p_sep2 <- ggplot(group_avg, aes(x = Genus, y = mean_pct, fill = Group)) +
    geom_col(position = position_dodge(width = 0.8),
@@ -2877,14 +2916,14 @@ final_fig5
              position = position_dodge(width = 0.8),
              vjust = -0.3, size = 3, color = "black") +
 ```
-### Horizontal BRACKET (30% higher)
+Horizontal BRACKET (30% higher)
 ```{r}
    geom_segment(data = brackets_manual,
                 aes(x = x_rural, xend = x_urban,
                     y = y * 1.6, yend = y * 1.6),
                 inherit.aes = FALSE, linewidth = 0.6) +
 ```
-### Bracket legs (2% below the new level)
+Bracket legs (2% below the new level)
 ```{r}
    geom_segment(data = brackets_manual,
                 aes(x = x_rural, xend = x_rural,
@@ -2895,7 +2934,7 @@ final_fig5
                     y = y * 1.6, yend = y * 1.6 - (y * 1.6 * 0.02)),
                 inherit.aes = FALSE, linewidth = 0.6) +
 ```
-### Stars (also in the new level)
+Stars (also in the new level)
 ```{r}
    geom_text(data = brackets_manual,
              aes(x = gx, y = y * 1.6, label = stars),
@@ -2918,7 +2957,38 @@ final_fig5
  
  
 ```
-### Graph both boxplots for EUK and BACT
+
+
+
+
+
+
+
+
+
+
+
+###  When the paper is published, here it will appear the plot made by this code
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#### Graph both boxplots for EUK and BACT
+This code stacks the two barplots (`p_sep2` for bacterial genera and `p_sep` for eukaryotic taxa) one on top of the other, removes their individual titles, and combines them into a single panel figure. The legends are collected on the right-hand side, and automatic panel labels (A, B…) are added to distinguish the two plots. The theme ensures the legend is displayed on the right and the panel tags are styled in plain text with size 14. When run, it will display the final composite figure (`final_fig`).
+
 ```{r}
  
  final_fig <- (p_sep2 + labs(title = NULL)) /
@@ -2933,6 +3003,46 @@ final_fig5
  final_fig
  
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+###  When the paper is published, here it will appear the plot made by this code
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # Volcano graphs
 
