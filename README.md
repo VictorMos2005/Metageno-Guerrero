@@ -4498,8 +4498,10 @@ message("\nListo. Archivos generados:\n - ", OUT_PREFIX, "_Bacteria_stats.tsv",
 ## BUSCO completeness assessment of MAGs
 For the comprehension of the specific demographic signatures, we recovered 713 MAGs in total by focusing on the 10 highest-read individuals for each of the ten differential lineages identified previously, five bacterial and five eukaryotic taxa (Fig. 10). Rural and Urban cohorts contributed roughly equal shares of these genomes (Fig. 10A–B). Across MAGs, single-copy BUSCOs dominated the profiles, whereas duplicated, fragmented, and missing categories formed minor fractions, yielding near-identical distributions between lifestyles (Fig. 10A vs. 10B).
 
-### Summary figure of MAGs
-### We need the BUSCO file "tabla_busco.csv"
+#### Summary figure of MAGs
+This code loads a BUSCO summary (`tabla_busco.csv`), defines the lists of Urban and Rural sample filenames, builds a unique MAG identifier (`id = File_MAG`), coerces the BUSCO percentage columns (S, D, F, M) to numeric, assigns each MAG to a `Group` (“Rural” or “Urban”) based on its `File`, reshapes the BUSCO scores from wide to long (`Status`/`Percent`), recodes the BUSCO status names to readable labels (“Single-copy”, “Duplicated”, “Fragmented”, “Missing”), creates a sequential `label_id` per group for plotting order, and sets a custom color palette for those four statuses.
+
+We need the BUSCO file "tabla_busco.csv"
 ```{r}
 buscos <- read.csv("/home/alumno21/axel/files/tabla_busco.csv", sep = ",", stringsAsFactors = FALSE)
 colnames(buscos)
@@ -4553,24 +4555,24 @@ rural_files <- c("37082_3 # 17", "37082_3#15", "37035_1#22", "36703_3#31", "3708
                  "37035_7 # 18", "37035_7#23", "37035_7#25")
 
 ```
-### Assign a unique name to the MAG
+Assign a unique name to the MAG
 ```{r}
 buscos$id <- paste0(buscos$File, "_", buscos$MAG)
 
 ```
-### Ensure that S, D, F, M are numeric
+Ensure that S, D, F, M are numeric
 ```{r}
 buscos <- buscos %>%
   mutate(across(c(S, D, F, M), as.numeric))
 
 ```
-### Assign Rural or Urban group according to external vectors
+Assign Rural or Urban group according to external vectors
 ```{r}
 buscos$Group <- ifelse(buscos$File %in% rural_files, "Rural",
                        ifelse(buscos$File %in% urban_files, "Urban", NA))
 
 ```
-### Transform to long format
+Transform to long format
 ```{r}
 buscos_long <- buscos %>%
   select(id, Group, S, D, F, M) %>%
@@ -4579,7 +4581,7 @@ buscos_long <- buscos %>%
                values_to = "Percent")
 
 ```
-### More readable labels
+More readable labels
 ```{r}
 buscos_long$Status <- recode(buscos_long$Status,
                              "S" = "Single-copy",
@@ -4588,7 +4590,7 @@ buscos_long$Status <- recode(buscos_long$Status,
                              "M" = "Missing")
 
 ```
-### Create a consecutive label ID per group
+Create a consecutive label ID per group
 ```{r}
 buscos_long <- buscos_long %>%
   group_by(Group) %>%
@@ -4596,7 +4598,7 @@ buscos_long <- buscos_long %>%
   ungroup()
 
 ```
-### Improved color palette
+Improved color palette
 ```{r}
 busco_colors <- c(
   "Single-copy" = " # 1f77b4",
@@ -4606,7 +4608,9 @@ busco_colors <- c(
 )
 
 ```
-### --- Individual plots ---
+#### Individual plots
+These commands generate stacked bar plots of BUSCO categories for Rural and Urban MAGs. The Rural plot hides the legend, while the Urban plot shows it on the right, enabling a side-by-side comparison of completeness profiles.
+
 ```{r}
 
 plot_rural <- ggplot(buscos_long %>% filter(Group == "Rural"),
@@ -4648,9 +4652,10 @@ plot_urban <- ggplot(buscos_long %>% filter(Group == "Urban"),
 
 
 ```
-### --- Combine plots with patchwork ---
-```{r}
+#### Combine plots with patchwork
+This code combines the Rural and Urban BUSCO bar plots side by side in a single figure. It uses `patchwork` to arrange them in two columns, adds automatic panel labels (A, B), and applies a clean theme with centered title, uniform margins, and bold tags positioned near the top left of each subplot. The result is a comparative visualization of BUSCO completeness between Rural and Urban groups.
 
+```{r}
 
 combined_busco_plot <- plot_rural + plot_urban +
   plot_layout(ncol = 2) +
@@ -4669,29 +4674,60 @@ combined_busco_plot <- plot_rural + plot_urban +
 ### Final BUSCO table wit colors
 ```{r}
 combined_busco_plot
+
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+###  When the paper is published, here it will appear the plot made by this code
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 <a id="fun-anno"></a>
 ## Functional annotation profiles of high-quality MAGs
-#### (>95% completeness) from Rural and Urban groups.
+(>95% completeness) from Rural and Urban groups.
 
-## Part A
-### We need the functional annotations file "all_annotations_trimmed.csv"
+#### Part A
+*We need the functional annotations file "all_annotations_trimmed.csv"
 
-### --- Libraries ---
+#### Libraries 
 ```{r}
 library(dplyr)
 library(ggplot2)
 library(scales) # Para percent_format()
 
 ```
-### --- Load data ---
+#### Load data
+This block loads the annotation file, defines the Urban and Rural sample lists, and sets up a helper function. The function `assign_domain()` standardizes taxonomy into simplified categories. It classifies terms as Viral (if they match viral families or genome types), Bacteria, Archaea, or Eukaryota. If the input is "root" or doesn’t fit these rules, it assigns the label "Other". This prepares the annotation data for consistent downstream grouping and comparisons between Rural and Urban samples.
+
 ```{r}
 anot <- read.csv("/home/alumno21/axel/files/all_annotations_trimmed.csv",
                  sep = ",", stringsAsFactors = FALSE)
 
 ```
-### --- Define files by group ---
+Define files by group 
 ```{r}
 urban_files <- c("37082_2 # 1", "37082_1#20", "37082_1#27", "37035_2#13", "37035_1#29",
                  "37082_2 # 14", "37035_2#12", "37035_2#6", "37082_1#17", "37035_2#14",
@@ -4737,7 +4773,7 @@ rural_files <- c("37082_3 # 17", "37082_3#15", "37035_1#22", "36703_3#31", "3708
                  "37035_7 # 18", "37035_7#23", "37035_7#25")
 
 ```
-### --- Function to classify simplified domain ---
+Function to classify simplified domain
 ```{r}
 assign_domain <- function(term) {
   term_lower <- tolower(term)
@@ -4757,7 +4793,8 @@ assign_domain <- function(term) {
 }
 
 ```
-### --- Step 1: Prepare data ---
+#### 1. Prepare data 
+The code cleans `max_annot_lvl`, classifies entries into simplified domains, assigns each file as Rural or Urban, and keeps only those grouped samples.
 ```{r}
 anot <- anot %>%
   filter(grepl("\\|", max_annot_lvl)) %>%
@@ -4773,7 +4810,9 @@ anot <- anot %>%
   filter(!is.na(Grupo))
 
 ```
-### --- Step 2: Relative abundance per MAG ---
+#### 2. Relative abundance per MAG 
+This workflow calculates annotation scores per file and per taxonomic level, normalizes them to relative abundance by dividing each level’s score by the file’s total score, adds the Rural/Urban group information, and removes missing values.
+
 ```{r}
 score_total_por_file <- anot %>%
   group_by(File) %>%
@@ -4790,14 +4829,16 @@ abundancia_relativa <- score_por_file_nivel %>%
   filter(!is.na(abund_rel))
 
 ```
-### --- Step 3: Average by group and domain ---
+#### 3. Average by group and domain 
+This code computes the average relative abundance of each simplified domain, grouped by Rural or Urban, giving a summary of domain-level composition for each group.
 ```{r}
 abundancia_promedio <- abundancia_relativa %>%
   group_by(Grupo, Domain_simplified) %>%
   summarise(promedio_abund = mean(abund_rel), .groups = "drop")
 
 ```
-### --- Step 4: Count unique MAGs per group ---
+### 4. Count unique MAGs per group 
+That snippet calculates the number of unique MAGs per group (Rural vs Urban), giving a simple count of how many MAGs are present in each.
 ```{r}
 n_mags_por_grupo <- anot %>%
   select(Grupo, MAG) %>%
@@ -4805,15 +4846,16 @@ n_mags_por_grupo <- anot %>%
   group_by(Grupo) %>%
   summarise(n_MAGs = n(), .groups = "drop")
 ```
-### --- Extra Step 4: Count annotated genes/ORFs per group ---
+#### Extra 4. Count annotated genes/ORFs per group 
+That code counts the total number of annotated genes in each group (Rural and Urban), giving a direct measure of gene representation per group.
 ```{r}
 n_genes_por_grupo <- anot %>%
   group_by(Grupo) %>%
   summarise(n_genes = n(), .groups = "drop")
 
-
 ```
-### --- Step 5: Count unique microorganisms per group ---
+#### 5. Count unique microorganisms per group 
+This new snippet calculates the number of distinct microbial taxa (`max_annot_lvl_clean`) per group (Rural vs Urban) and stores the counts in `n_microbes_por_grupo`. Then it loads the libraries needed for visualization and data handling (`ggplot2`, `dplyr`, `scales`, `patchwork`, `RColorBrewer`).
 ```{r}
 n_microbes_por_grupo <- anot %>%
   select(Grupo, max_annot_lvl_clean) %>%
@@ -4822,7 +4864,7 @@ n_microbes_por_grupo <- anot %>%
   summarise(n_microbes = n(), .groups = "drop")
 
 ```
-### --- Required libraries ---
+Required libraries 
 ```{r}
 library(ggplot2)
 library(dplyr)
@@ -4832,7 +4874,9 @@ library(RColorBrewer)
 
 
 ```
-### --- Step 6: Text of annotated genes/ORFs per group ---
+#### 6. Text of annotated genes/ORFs per group 
+This code creates a string called `texto_genes` that reports the number of annotated genes in Rural and Urban groups. For instance, if the Rural group has 12000 genes and the Urban group has 15000, the output will be `"Annotated genes (Rural: 12000 | Urban: 15000)"`, which can then be used as a caption or figure annotation.
+
 ```{r}
 texto_genes <- paste0(
   "Annotated genes (Rural: ", n_genes_por_grupo$n_genes[n_genes_por_grupo$Grupo == "Rural"],
@@ -4840,7 +4884,8 @@ texto_genes <- paste0(
 )
 
 ```
-### --- Step 7: Percentages in legend ---
+#### 7. Percentages in legend 
+This code calculates the relative abundance of each simplified domain across all groups, then expresses it as percentages. It creates labels combining the domain name and its percentage, such as `"Bacteria (65%)"` or `"Eukaryota (25%)"`. These labels are stored in `labels_legend`, with domain names as keys, making them ready to use as customized legend labels in plots.
 ```{r}
 porcentaje_por_dominio <- abundancia_promedio %>%
   group_by(Domain_simplified) %>%
@@ -4851,7 +4896,7 @@ labels_legend <- porcentaje_por_dominio$label
 names(labels_legend) <- porcentaje_por_dominio$Domain_simplified
 
 ```
-### --- Step 8: Bar plot ---
+#### 8. Bar plot 
 ```{r}
 plot_abundancia <- ggplot(abundancia_promedio, aes(x = Grupo, y = promedio_abund, fill = Domain_simplified)) +
   geom_bar(stat = "identity", position = "fill") +
@@ -4876,28 +4921,59 @@ plot_abundancia <- ggplot(abundancia_promedio, aes(x = Grupo, y = promedio_abund
   )
 
 ```
-### --- Step 9: Text box below the plot ---
+#### 9. Text box below the plot 
+This code creates a stacked bar plot of domain relative abundances in Rural vs Urban groups, normalized to percentages with a classic theme and labeled legend.
 ```{r}
 plot_texto <- ggplot() +
   annotate("text", x = 0.5, y = 0.5, label = texto_genes, size = 3, hjust = 0.5) +
   theme_void()
 
 ```
-### --- Step 10: Combine both with patchwork ---
-### plot_funanondoms <- plot_abundancia / plot_texto + plot_layout(heights = c(10, 1))
+### 10. Combine both with patchwork 
+Here you first combined `plot_abundancia` and `plot_texto` into a vertical layout, then reassigned `plot_funanondoms` to just `plot_abundancia`. The final object will only keep the bar plot, and the text panel is discarded.
+
 ```{r}
+plot_funanondoms <- plot_abundancia / plot_texto + plot_layout(heights = c(10, 1))
 plot_funanondoms <- plot_abundancia 
 
 ```
-### Show results
+#### Show results
 ```{r}
 plot_funanondoms
 
 
 ```
-## Part B
 
-### --- Libraries ---
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+###  When the paper is published, here it will appear the plot made by this code
+
+
+
+
+
+
+
+
+
+
+
+#### Part B
+
+#### Libraries 
 ```{r}
 library(dplyr)
 library(ggplot2)
@@ -4907,18 +4983,20 @@ library(RColorBrewer)
 library(taxize)
 
 ```
-### --- Configure Entrez API Key for taxize ---
+#### Configure Entrez API Key for taxize 
 ```{r}
 Sys.setenv(ENTREZ_KEY = "99c57399ef66d8906cbc244b43bbf0239008")
 
 ```
-### --- Load data ---
+#### Load data 
+Load the annotations file, define the rural and urban sample lists, and create a function that maps each annotation to a simplified domain—Viral, Bacteria, Archaea, Eukaryota, or Other. This preprocesses the data so you can compare Rural vs. Urban.
+
 ```{r}
 anot <- read.csv("/home/alumno21/axel/files/all_annotations_trimmed.csv",
                  sep = ",", stringsAsFactors = FALSE)
 
 ```
-### --- Define files by group ---
+Define files by group 
 ```{r}
 urban_files <- c("37082_2 # 1", "37082_1#20", "37082_1#27", "37035_2#13", "37035_1#29",
                  "37082_2 # 14", "37035_2#12", "37035_2#6", "37082_1#17", "37035_2#14",
@@ -4964,7 +5042,7 @@ rural_files <- c("37082_3 # 17", "37082_3#15", "37035_1#22", "36703_3#31", "3708
                  "37035_7 # 18", "37035_7#23", "37035_7#25")
 
 ```
-### --- Function to classify simplified domain ---
+Function to classify simplified domain 
 ```{r}
 assign_domain <- function(term) {
   term_lower <- tolower(term)
@@ -4984,7 +5062,8 @@ assign_domain <- function(term) {
 }
 
 ```
-### --- Step 1: Prepare data ---
+#### 1. Prepare data 
+That block keeps only annotations with a valid hierarchy (max_annot_lvl containing “|”), cleans the taxonomic level name, assigns a simplified domain using assign_domain, labels each file as Rural or Urban based on the sample lists, and drops records that don’t belong to either group.
 ```{r}
 anot <- anot %>%
   filter(grepl("\\|", max_annot_lvl)) %>%
@@ -5000,7 +5079,8 @@ anot <- anot %>%
   filter(!is.na(Grupo))
 
 ```
-### --- Step 2: Filter only bacteria and clean Preferred_name ---
+#### 2. Filter only bacteria and clean Preferred_name 
+That block filters only bacterial annotations, cleans the `Preferred_name` field by removing any text before the last “|”, and keeps only entries with a non-empty cleaned name.
 ```{r}
 anot_bacteria <- anot %>%
   filter(Domain_simplified == "Bacteria") %>%
@@ -5014,7 +5094,8 @@ anot_bacteria <- anot %>%
   filter(Preferred_name_clean != "")
 
 ```
-### --- Step 3: Calculate relative abundance per file and Preferred_name_clean ---
+#### 3. Calculate relative abundance per file and Preferred_name_clean 
+This code calculates the total bacterial score per file, then the score per cleaned bacterial name within each file, and finally computes relative abundances by dividing each name’s score by the file’s total. It then attaches the Rural/Urban group label to each file and removes invalid or missing values.
 ```{r}
 score_total_por_file_bact <- anot_bacteria %>%
   group_by(File) %>%
@@ -5031,14 +5112,17 @@ abundancia_relativa_name <- score_por_file_name %>%
   filter(!is.na(abund_rel), !is.na(Preferred_name_clean))
 
 ```
-### --- Step 4: Average abundance by group and Preferred_name_clean ---
+#### 4. Average abundance by group and Preferred_name_clean 
+This code calculates the mean relative abundance of each bacterial name (`Preferred_name_clean`) within Rural and Urban groups by averaging across all files in each group.
+
 ```{r}
 abundancia_promedio_name <- abundancia_relativa_name %>%
   group_by(Grupo, Preferred_name_clean) %>%
   summarise(promedio_abund = mean(abund_rel), .groups = "drop")
 
 ```
-### --- Step 5: Calculate total abundance for each taxon ---
+#### 5. Calculate total abundance for each taxon 
+This code computes the total abundance of each bacterial name (`Preferred_name_clean`) by summing its mean relative abundances across groups, then orders the results from highest to lowest abundance.
 ```{r}
 porcentaje_por_name <- abundancia_promedio_name %>%
   group_by(Preferred_name_clean) %>%
@@ -5046,38 +5130,42 @@ porcentaje_por_name <- abundancia_promedio_name %>%
   arrange(desc(total_abund))
 
 ```
-### --- Step 6: Query NCBI taxonomic hierarchies for top 50 names ---
+#### 6. Query NCBI taxonomic hierarchies for top 50 names 
+This block takes the top 50 most abundant bacterial names, cleans them by removing “unclassified,” filtering out empty, dash, or NA entries, and correcting “Bacteroidetes” to the NCBI-approved “Bacteroidota.” Then it queries the NCBI taxonomy database using the `classification` function to retrieve their taxonomic classification, with `ask = FALSE` to skip interactive disambiguation.
+
 ```{r}
 top_raw_names <- porcentaje_por_name %>%
   slice_head(n = 50) %>%
   pull(Preferred_name_clean)
 
 ```
-### Clean for taxize (eliminate "unclassified" to avoid any errors)
+Clean for taxize (eliminate "unclassified" to avoid any errors)
 ```{r}
 cleaned_top_names <- gsub("unclassified ", "", top_raw_names)
 ```
-### Filter empty entries, dashes or NA
+Filter empty entries, dashes or NA
 ```{r}
 cleaned_top_names <- cleaned_top_names[cleaned_top_names != "" & cleaned_top_names != "-" & !is.na(cleaned_top_names)]
 
 ```
-### Replace "Bacteroidetes" for "Bacteroidota" (NCBI approved name)
+Replace "Bacteroidetes" for "Bacteroidota" (NCBI approved name)
 ```{r}
 cleaned_top_names <- gsub("^Bacteroidetes$", "Bacteroidota", cleaned_top_names)
 
 ```
-###  Now consult with "ask" = TRUE for those ambiguous , or directly FLASE if already cleaned
+Now consult with "ask" = TRUE for those ambiguous , or directly FLASE if already cleaned
 ```{r}
 tax_data <- classification(cleaned_top_names, db = "ncbi", ask = FALSE)
 
 ```
-### --- Step 7 (modified): Extract the most specific taxon for each name ---
+#### 7. (modified): Extract the most specific taxon for each name
+This code takes the top raw names, looks them up in NCBI, keeps only key taxonomic ranks, and records the most specific available match. It saves that name and rank, keeps the original label, and if the original started with “unclassified” it reattaches that prefix to the final taxon.
+
 ```{r}
 tax_levels <- c("species", "genus", "family", "order", "class", "phylum", "superkingdom")
 
 ```
-### We start tax_info with the size andoriginal names to avoid issues
+We start tax_info with the size andoriginal names to avoid issues
 ```{r}
 tax_info <- data.frame(Name = top_raw_names,
                        Taxon_especifico = NA_character_,
@@ -5088,12 +5176,12 @@ for (i in seq_along(tax_data)) {
   taxon <- tax_data[[i]]
   
 ```
-### Skip if taxon is NULL or from logic class (as FALSE)
+Skip if taxon is NULL or from logic class (as FALSE)
 ```{r}
   if (is.null(taxon) || is.logical(taxon)) next
   
 ```
-### Filter levels of interest
+Filter levels of interest
 ```{r}
   taxon_filtered <- taxon %>%
     filter(rank %in% tax_levels)
@@ -5109,19 +5197,21 @@ for (i in seq_along(tax_data)) {
 }
 
 ```
-### Add the column Original_Name (the complete name, with possible "unclassified")
+Add the column Original_Name (the complete name, with possible "unclassified")
 ```{r}
 tax_info$Original_Name <- top_raw_names
 
 ```
-### Create column Taxon_final with prefix "unclassified" if the original name had it
+Create column Taxon_final with prefix "unclassified" if the original name had it
 ```{r}
 tax_info$Taxon_final <- ifelse(grepl("^unclassified ", tax_info$Original_Name),
                                paste0("unclassified ", tax_info$Taxon_especifico),
                                tax_info$Taxon_especifico)
 
 ```
-### --- Step 9: Merge abundance with tax_info to use Taxon_final ---
+#### 8. Merge abundance with tax_info to use Taxon_final 
+This step links the average abundance table with the cleaned taxonomy info, replacing each original name with its final standardized taxon. If no match is found, the original name is kept as fallback.
+
 ```{r}
 abundancia_promedio_name <- abundancia_promedio_name %>%
   left_join(tax_info %>% select(Original_Name, Taxon_final),
@@ -5129,7 +5219,8 @@ abundancia_promedio_name <- abundancia_promedio_name %>%
   mutate(Taxon_final = ifelse(is.na(Taxon_final), Preferred_name_clean, Taxon_final))
 
 ```
-### --- Step 10: Select top 15 most specific taxa to plot ---
+#### 9. Select top 15 most specific taxa to plot 
+This code identifies the top 15 taxa by total average abundance and then filters the dataset to keep only those top taxa for further analysis or visualization.
 ```{r}
 top_taxa_final <- abundancia_promedio_name %>%
   group_by(Taxon_final) %>%
@@ -5142,7 +5233,9 @@ abundancia_promedio_taxon_top <- abundancia_promedio_name %>%
   filter(Taxon_final %in% top_taxa_final)
 
 ```
-### --- Step 11: Labels and colors for plot ---
+#### 10. Labels and colors for plot 
+This block creates formatted labels for the top taxa, including their percentage contribution to total abundance, and assigns them in the same order as `top_taxa_final`. It also generates a custom color palette of 15 distinct colors from the **Set3** palette for plotting.
+
 ```{r}
 labels_taxon_top <- abundancia_promedio_taxon_top %>%
   group_by(Taxon_final) %>%
@@ -5156,7 +5249,10 @@ names(labels_taxon_top) <- top_taxa_final
 colors_top <- colorRampPalette(brewer.pal(12, "Set3"))(15)
 
 ```
-### --- Step 12: Text of annotated genes for bacteria ---
+#### 11. Text of annotated genes for bacteria 
+This line generates a text string summarizing the number of bacterial annotated genes per group, formatted as:
+`Bacterial annotated genes (Rural: X | Urban: Y)` where X and Y are the counts for Rural and Urban, respectively.
+
 ```{r}
 texto_genes_bact <- paste0(
   "Bacterial annotated genes (Rural: ", sum(anot_bacteria$Grupo == "Rural"),
@@ -5164,7 +5260,9 @@ texto_genes_bact <- paste0(
 )
 
 ```
-### --- Step 13: Bar plot ---
+#### 12. Bar plot 
+This code builds a stacked bar plot showing the relative abundance of the top 15 bacterial taxa between Rural and Urban groups. It normalizes bar heights to proportions, uses a custom color palette and legend labels, and applies a clean theme with adjusted margins and text size for clarity.
+
 ```{r}
 plot_bacteria <- ggplot(abundancia_promedio_taxon_top,
                         aes(x = Grupo, y = promedio_abund, fill = Taxon_final)) +
@@ -5187,28 +5285,75 @@ plot_bacteria <- ggplot(abundancia_promedio_taxon_top,
   )
 
 ```
-### --- Step 14: Text below the plot ---
+
+
+
+
+
+
+
+
+
+
+
+###  When the paper is published, here it will appear the plot made by this code
+
+
+
+
+
+
+
+
+
+
+
+
+#### 14. Text below the plot 
 ```{r}
 plot_texto_bact <- ggplot() +
   annotate("text", x = 0.5, y = 0.5, label = texto_genes_bact, size = 3, hjust = 0.5) +
   theme_void()
 
 ```
-### --- Step 15: Combine plot and text ---
-### plot_bacteriafunano <- plot_bacteria / plot_texto_bact + patchwork::plot_layout(heights = c(10, 1))
+#### 15. Combine plot and text 
+
 ```{r}
-plot_bacteriafunano <- plot_bacteria 
+plot_bacteriafunano <- plot_bacteria
+plot_bacteriafunano <- plot_bacteria / plot_texto_bact + patchwork::plot_layout(heights = c(10, 1))
 
 ```
-### --- Show result ---
+#### Show result 
 ```{r}
 plot_bacteriafunano
 
-
-
-
 ```
+
+
+
+
+
+
+
+
+
+###  When the paper is published, here it will appear the plot made by this code
+
+
+
+
+
+
+
+
+
+
+
+
 ### Part C
+
+This code isolates Eukaryota annotations, keeps only entries whose `Preferred_name` contains a taxonomic pipe (`|`), and cleans that field to the substring after the last pipe. It sums per-file scores to get totals, sums scores per file and cleaned name, divides by the per-file total to obtain relative abundances, attaches the Rural/Urban group, and drops NAs. It then averages those relative abundances by group and name, ranks names by their overall mean abundance across groups, takes the top 50, and finally cleans those names by removing any leading “unclassified ” and discarding empty, “-”, or NA values.
+
 ```{r}
 
 anot_eukaryota <- anot %>%
@@ -5250,7 +5395,9 @@ cleaned_top_names_euk <- gsub("unclassified ", "", top_raw_names_euk)
 cleaned_top_names_euk <- cleaned_top_names_euk[cleaned_top_names_euk != "" & cleaned_top_names_euk != "-" & !is.na(cleaned_top_names_euk)]
 
 ```
-### Query taxonomy
+#### Query taxonomy
+This block fetches NCBI classifications for the cleaned top Eukaryota names, extracts the most specific rank among a set of target levels, and builds a lookup that preserves any original “unclassified ” prefix. It then maps those standardized names back onto the group-wise mean abundance table, falling back to the original cleaned name if a taxonomy lookup is missing. Finally, it aggregates by the standardized taxon, ranks taxa by total mean abundance across groups, selects the top 15, and filters the table to those taxa for downstream plotting or comparison.
+
 ```{r}
 tax_data_euk <- classification(cleaned_top_names_euk, db = "ncbi", ask = FALSE)
 
@@ -5291,7 +5438,9 @@ abundancia_promedio_taxon_top_euk <- abundancia_promedio_name_euk %>%
   filter(Taxon_final %in% top_taxa_final_euk)
 
 ```
-### Labels
+#### Labels
+This code prepares the legend and caption for your Eukaryota plot. It computes each top taxon’s share of total mean abundance and formats labels like “Taxon (xx%)” in the same order as `top_taxa_final_euk`. It then defines a 15-color palette from **RColorBrewer**’s *Paired* scheme for those taxa, and builds a caption string reporting how many Eukaryotic annotated genes come from Rural vs Urban samples.
+
 ```{r}
 labels_taxon_top_euk <- abundancia_promedio_taxon_top_euk %>%
   group_by(Taxon_final) %>%
@@ -5310,7 +5459,8 @@ texto_genes_euk <- paste0(
 )
 
 ```
-### Plot
+#### Plot
+It builds a stacked percent bar chart of the top Eukaryotic taxa by group (plot_euk), a one-line caption panel (plot_texto_euk), and a combined figure (plot_euk_final). Your last line reassigns plot_euk to plot_eukfunanon, so nothing is drawn automatically.
 ```{r}
 plot_euk <- ggplot(abundancia_promedio_taxon_top_euk,
                    aes(x = Grupo, y = promedio_abund, fill = Taxon_final)) +
@@ -5337,12 +5487,39 @@ plot_euk_final <- plot_euk / plot_texto_euk + patchwork::plot_layout(heights = c
 plot_eukfunanon <- plot_euk 
 
 ```
-### This
+
+
+
+
+
+
+
+
+
+
+###  When the paper is published, here it will appear the plot made by this code
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#### This
 ```{r}
 plot_eukfunanon
 library(patchwork)
 ```
-## ABC UNITED
+#### ABC UNITED
+That code combines the three panels (`plot_funanondoms`, `plot_bacteriafunano`, `plot_eukfunanon`) side by side with patchwork, adds automatic tags (A, B, C) through `plot_annotation`, and applies a theme to style the tags. The object `final_plotfunaon` holds the composite figure, and since the last line just evaluates it, R will render the full image in your plotting window when you run the code.
+
 ```{r}
 final_plotfunaon <- ( plot_funanondoms|plot_bacteriafunano|plot_eukfunanon
 ) +
@@ -5354,6 +5531,37 @@ final_plotfunaon <- ( plot_funanondoms|plot_bacteriafunano|plot_eukfunanon
 final_plotfunaon
 
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+###  When the paper is published, here it will appear the plot made by this code
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ## Functional annotation of genes from selected taxa
