@@ -83,7 +83,7 @@ Finally we are going to create graphics using Rstudio to be able to visualize th
 <a id="pcoa"></a>
 ## PCoA in the anthropometric-demographic space and its association with BMI percentile, age group, and lifestyle
 
- > #### Required labriaries
+ &emsp #### Required labriaries
   ```{r}
         library(ggplot2)
         library(vegan)
