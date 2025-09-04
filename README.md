@@ -6700,7 +6700,7 @@ euk_combined no significant data
 <a id="occurr"></a>
 ## Co-occurrence networks of bacterial and eukaryotic taxa based on Spearman correlations.
 
-### --- Required libraries ---
+#### Required libraries 
 ```{r}
 library(dplyr)
 library(tidyr)
@@ -6711,7 +6711,10 @@ library(stringr)
 kaiju_merged$reads <- as.numeric(kaiju_merged$reads)
 
 ```
-### If separate taxonomic columns do not exist but 'taxon_name' does
+#### 1. Preprocessing Kaiju annotations into genus-level grouped data
+The block checks if Domain and Genus are missing and extracts them from taxon_name. It fills missing Genus, Family, and Order with "Unclassified". If file_base is missing, it derives it from file. Then it assigns each file to Rural or Urban groups, filters out samples without groups, and keeps only Bacteria and Eukaryota at genus level, excluding empty or "Unclassified" genera.
+
+If separate taxonomic columns do not exist but 'taxon_name' does
 ```{r}
 if (!all(c("Domain","Genus") %in% names(kaiju_merged)) && "taxon_name" %in% names(kaiju_merged)) {
   kaiju_merged <- kaiju_merged %>%
@@ -6724,13 +6727,13 @@ if (!all(c("Domain","Genus") %in% names(kaiju_merged)) && "taxon_name" %in% name
 }
 
 ```
-### Fill minimal gaps
+Fill minimal gaps
 ```{r}
 kaiju_merged <- kaiju_merged %>%
   mutate(across(c(Genus, Family, Order), ~ ifelse(is.na(.) | . == "", "Unclassified", .)))
 
 ```
-### file_base if needed
+file_base if needed
 ```{r}
 if (!"file_base" %in% names(kaiju_merged)) {
   if ("file" %in% names(kaiju_merged)) {
@@ -6741,7 +6744,7 @@ if (!"file_base" %in% names(kaiju_merged)) {
 }
 
 ```
-### --- Assign groups (adjust your 'urban_files' and 'rural_files' lists) ---
+Assign groups (adjust your 'urban_files' and 'rural_files' lists) ---
 ```{r}
 kaiju_merged <- kaiju_merged %>%
   mutate(Group = case_when(
@@ -6753,7 +6756,7 @@ kaiju_merged <- kaiju_merged %>%
 cat("Número de muestras asignadas a grupos:\n"); print(table(kaiju_merged$Group))
 
 ```
-### --- Filter ONLY Bacteria/Eukaryota and keep GENUS ---
+Filter ONLY Bacteria/Eukaryota and keep GENUS ---
 ```{r}
 full_data <- kaiju_merged %>%
   filter(Domain %in% c("Bacteria","Eukaryota")) %>%
@@ -6761,15 +6764,15 @@ full_data <- kaiju_merged %>%
   mutate(Genus = str_trim(Genus))
 
 ```
-### ------------------------------------------------------------------
-### 2) PRE-FILTERING OF ABUNDANT GENERA (accelerates bootstrap)
-### (same thresholds for both domains)
-### ------------------------------------------------------------------
+#### 2. Pre-filtering of abundant genera
+A minimum threshold of 8 mean reads per genus is set. For Bacteria and Eukaryota separately, genera exceeding this threshold are identified in both Urban and Rural groups, and only the genera present in both are kept. The dataset is then filtered to include only these common, abundant genera.
+
+(same thresholds for both domains)
 ```{r}
 threshold_genus <- 8 # lecturas promedio mínimas
 
 ```
-### Bacteria
+Bacteria
 ```{r}
 genus_bact_urban <- full_data %>% filter(Group == "Urban",  Domain == "Bacteria") %>%
   group_by(Genus) %>% summarise(mean_reads = mean(reads), .groups = "drop") %>%
@@ -6782,7 +6785,7 @@ genus_bact_rural <- full_data %>% filter(Group == "Rural",  Domain == "Bacteria"
 common_genus_bact <- intersect(genus_bact_urban, genus_bact_rural)
 
 ```
-### Eukaryota
+Eukaryota
 ```{r}
 genus_euk_urban <- full_data %>% filter(Group == "Urban",  Domain == "Eukaryota") %>%
   group_by(Genus) %>% summarise(mean_reads = mean(reads), .groups = "drop") %>%
@@ -6798,16 +6801,17 @@ cat("Common genera after filter — Bacteria:", length(common_genus_bact),
     " | Eukaryota:", length(common_genus_euk), "\n")
 
 ```
-### Keep only those abundant genera per domain
+Keep only those abundant genera per domain
 ```{r}
 full_data_filtered <- full_data %>%
   filter((Domain == "Bacteria"  & Genus %in% common_genus_bact) |
            (Domain == "Eukaryota" & Genus %in% common_genus_euk))
 
 ```
-### ------------------------------------------------------------------
-### 3) Function to create matrix (GENUS) log2-normalized per sample
-### ------------------------------------------------------------------
+
+#### 3. Function to create matrix (GENUS) log2-normalized per sample
+You generate log2-transformed relative abundance matrices of genera for Urban and Rural groups, with samples as rows and genera as columns. The function ensures proportions per sample, avoiding zeros by adding a small constant. A genus-to-domain mapping table is also created for reference.
+
 ```{r}
 crear_matriz <- function(df, taxon_col = "Genus") {
   df %>%
@@ -6822,7 +6826,7 @@ crear_matriz <- function(df, taxon_col = "Genus") {
 }
 
 ```
-### Matrices per group (Bacteria + Eukaryota together, columns = GENUS)
+Matrix per group (Bacteria + Eukaryota together, columns = GENUS)
 ```{r}
 mat_urban <- full_data_filtered %>% filter(Group == "Urban") %>% crear_matriz("Genus")
 mat_rural <- full_data_filtered %>% filter(Group == "Rural") %>% crear_matriz("Genus")
@@ -6831,15 +6835,16 @@ cat("Dimensiones matriz Urban (genus):", dim(mat_urban), "\n")
 cat("Dimensiones matriz Rural (genus):", dim(mat_rural), "\n")
 
 ```
-### GENUS -> DOMAIN map
+GENUS -> DOMAIN map
 ```{r}
 genus_domain_map <- full_data_filtered %>%
   distinct(Genus, Domain)
 
 ```
-### ------------------------------------------------------------------
-### 4) Bootstrap Spearman
-### ------------------------------------------------------------------
+
+#### 4. Bootstrap Spearman
+This function bootstraps Spearman correlation between two vectors, returning mean and percentile CI; if results are invalid, it outputs NAs.
+
 ```{r}
 bootstrap_correlation <- function(vec1, vec2, n = 200) {
   stat <- function(data, indices) {
@@ -6855,9 +6860,10 @@ bootstrap_correlation <- function(vec1, vec2, n = 200) {
 }
 
 ```
-### ------------------------------------------------------------------
-### 5) Correlations (all at GENUS level) and relationship classification
-### ------------------------------------------------------------------
+
+#### 5. Correlations (all at GENUS level) and relationship classification
+This code computes pairwise Spearman correlations with bootstrap CIs between genera, classifies each pair as bacteria-bacteria, eukaryota-eukaryota, or bacteria-eukaryota, and produces edge tables separately for Urban and Rural samples.
+
 ```{r}
 correlacion_spearman_boot <- function(matrix, genus_domain_map) {
   out <- tibble()
@@ -6886,7 +6892,7 @@ correlacion_spearman_boot <- function(matrix, genus_domain_map) {
 }
 
 ```
-### Run by group
+Run by group
 ```{r}
 cat("Calculando correlaciones (Urban)...\n")
 edges_urban <- correlacion_spearman_boot(mat_urban, genus_domain_map)
@@ -6894,9 +6900,10 @@ cat("Calculando correlaciones (Rural)...\n")
 edges_rural <- correlacion_spearman_boot(mat_rural, genus_domain_map)
 
 ```
-### ------------------------------------------------------------------
-### 6) Filters by relationship and export
-### ------------------------------------------------------------------
+
+#### 6. Filters by relationship and export
+This code filters correlation edges by relationship type using thresholds (0.7 for bacteria-bacteria, 0.3 for others), keeps only significant nonzero CI correlations, builds node tables, and then exports Cytoscape-compatible files (`.sif`, edge attributes, node attributes) for each group (Urban, Rural) and relation type (Bacteria-Bacteria, Bacteria-Eukaryota, Eukaryota-Eukaryota). It finishes with a message confirming network export.
+
 ```{r}
 filtrar_por_relacion <- function(edges_df, relation_type) {
   rho_thresh <- dplyr::case_when(
@@ -6934,7 +6941,7 @@ for (grupo_nombre in names(grupos)) {
     nodes_filtrados <- crear_nodos_de_edges(edges_filtradas, full_data_filtered)
     
 ```
-### Output files
+Output files
 ```{r}
     edges_sif <- edges_filtradas %>%
       mutate(Source = gsub(" ", "_", Genus_1),
@@ -6969,19 +6976,17 @@ cat("Done! Networks (GENUS) exported by relationship and group.\n")
 
 
 ```
-### ===================== Adjustments (much stricter) =====================
+#### Adjustments (much stricter) 
+This code loads libraries, fixes the seed, and sets thresholds for filtering taxa, correlations, co-occurrence, and edge significance, with stricter cutoffs for bacteria than eukaryotes.
+
 ```{r}
-
-
-
-
 suppressPackageStartupMessages({
   library(dplyr); library(tidyr); library(tibble)
   library(stringr); library(boot)
 })
 set.seed(1234)
 ```
-### Filters by group (prevalence and mean %, NORMALIZED BY DOMAIN)
+Filters by group (prevalence and mean %, NORMALIZED BY DOMAIN)
 ```{r}
 MIN_PREV_BACT <- 0.20
 MIN_PREV_EUK  <- 0.10
@@ -6991,7 +6996,7 @@ TOP_N_BACT    <- 250
 TOP_N_EUK     <- 120
 
 ```
-### Correlación / Bootstrap
+Correlation / Bootstrap
 ```{r}
 BOOT_R               <- 300
 PSEUDO               <- 1e-6
@@ -7000,25 +7005,28 @@ PRESCREEN_ABS_RHO_WL <- 0.20 # si toca whitelist
 MIN_SAMPLES_PER_G    <- 8
 
 ```
-### Minimum co-occurrence (samples where BOTH > 0)
+Minimum co-occurrence (samples where BOTH > 0)
 ```{r}
 MIN_COOC_FRAC <- 0.35 # ≥35% de las muestras del grupo
 MIN_COOC_ABS  <- 20 # y al menos 20 muestras
 
 ```
-### Final edge filter (only BE)
+Final edge filter (only BE)
 ```{r}
 THRESH_BE <- 0.45 # |rho_mean| mínimo
 ALPHA_Q   <- 0.05 # BH FDR
 
 ```
-### ===================== Whitelist of key genera =====================
+###  Whitelist of key genera 
+This sets mandatory taxa for inclusion: "Saccharomyces" for eukaryotes and none for bacteria.
 ```{r}
 force_include_euk  <- c("Saccharomyces")
 force_include_bact <- character(0)
 
 ```
-### ======================== Datos esperados en 'kaiju_merged' ========================
+#### Separated data in "kaiju_merged" 
+This code ensures reads are numeric, splits `taxon_name` into taxonomy if needed, creates `file_base` and `Group` when missing, filters out unassigned samples, then keeps only bacterial and eukaryotic genera while excluding unclassified entries and removing *Homo* from eukaryotes.
+
 ```{r}
 kaiju_merged$reads <- as.numeric(kaiju_merged$reads)
 
@@ -7048,7 +7056,7 @@ if (!"Group" %in% names(kaiju_merged)) {
 kaiju_merged <- kaiju_merged %>% filter(!is.na(Group))
 
 ```
-### Only Bacteria/Eukaryota at GENUS level; exclude Homo
+Only Bacteria/Eukaryota at GENUS level; exclude Homo
 ```{r}
 dat <- kaiju_merged %>%
   filter(Domain %in% c("Bacteria","Eukaryota")) %>%
@@ -7057,7 +7065,9 @@ dat <- kaiju_merged %>%
   filter(!(Domain=="Eukaryota" & Genus=="Homo"))
 
 ```
-### ------------------------ % within DOMAIN per sample ------------------------
+#### % within DOMAIN per sample 
+This block computes per-sample domain totals, aggregates reads at the genus level, joins the totals back, and calculates each genus’s percentage within its domain.
+
 ```{r}
 totals_domain <- dat %>%
   group_by(file_base, Group, Domain) %>%
@@ -7070,7 +7080,9 @@ genus_reads <- dat %>%
   mutate(pct_domain = if_else(total_reads_domain > 0, 100 * reads / total_reads_domain, 0))
 
 ```
-### ------------------------ prevalence and means per group -------------------
+#### Prevalence and means per group 
+This code filters genera by domain using prevalence and mean abundance thresholds in both Rural and Urban groups, keeps the top N per domain, and adds any forced inclusions. It then subsets the dataset to only those retained genera, reporting how many were kept for Bacteria and Eukaryota.
+
 ```{r}
 prev_mean <- genus_reads %>%
   group_by(Group, Domain, Genus) %>%
@@ -7079,7 +7091,7 @@ prev_mean <- genus_reads %>%
             .groups = "drop")
 
 ```
-### Keepers per domain + enforce whitelist
+Keepers per domain + enforce whitelist
 ```{r}
 keepers_bact <- prev_mean %>%
   filter(Domain=="Bacteria") %>%
@@ -7118,7 +7130,9 @@ dat_filt <- genus_reads %>%
            (Domain=="Eukaryota" & Genus %in% keepers_euk))
 
 ```
-### ======================= matrices per group (counts + CLR) ======================
+#### Matrix per group (counts + CLR) 
+This code defines functions to build count matrices by group, apply CLR transformation, align columns between Rural and Urban, map genera to domains, and prepare for correlation analysis. It then sets up `fast_pairwise_corr_BE`, which computes bacteria–eukaryote correlations using prescreening thresholds, co-occurrence filters, and bootstrap resampling.
+
 ```{r}
 counts_from_long <- function(df_long, group) {
   df_long %>%
@@ -7144,7 +7158,7 @@ mat_clr_rural <- clr_from_counts(cnt_rural)
 mat_clr_urban <- clr_from_counts(cnt_urban)
 
 ```
-### Alinear columnas
+Align comlumns
 ```{r}
 common_cols <- Reduce(intersect, list(colnames(mat_clr_rural), colnames(mat_clr_urban)))
 mat_clr_rural <- mat_clr_rural[, common_cols, drop = FALSE]
@@ -7153,12 +7167,12 @@ cnt_rural     <- cnt_rural[,     common_cols, drop = FALSE]
 cnt_urban     <- cnt_urban[,     common_cols, drop = FALSE]
 
 ```
-### Genus -> Domain map (only common)
+Genus -> Domain map (only common)
 ```{r}
 genus_domain_map <- dat_filt %>% distinct(Genus, Domain) %>% filter(Genus %in% common_cols)
 
 ```
-### =================== Prescreen + co-occurrence + bootstrap =================
+Prescreen + co-occurrence + bootstrap
 ```{r}
 fast_pairwise_corr_BE <- function(mat_clr, counts_mat, genus_domain_map,
                                   prescreen_global = PRESCREEN_ABS_RHO,
@@ -7176,13 +7190,14 @@ fast_pairwise_corr_BE <- function(mat_clr, counts_mat, genus_domain_map,
   if (length(bact_cols) == 0 || length(euk_cols) == 0) return(tibble())
   
 ```
-### Co-occurrence
+#### Co-occurrence
+This block runs pairwise bacteria–eukaryote correlation analysis. It computes Spearman correlations using ranked CLR-transformed counts, applies global and whitelist prescreen thresholds, filters pairs by minimum co-occurrence, and runs bootstrap resampling for confidence intervals and sign consistency. Results are collected for Rural and Urban groups, and Benjamini–Hochberg adjusted q-values are added.
 ```{r}
   pres_abs <- max(min_cooc_abs, ceiling(min_cooc_frac * nrow(counts_mat)))
   pres_mat <- counts_mat > 0
   
 ```
-### Spearman masivo = Pearson sobre rangos
+Massive Spearman = Pearson over ranges
 ```{r}
   mat_rank <- apply(mat_clr, 2, rank, ties.method = "average")
   R <- stats::cor(mat_rank[, bact_cols, drop = FALSE],
@@ -7190,7 +7205,7 @@ fast_pairwise_corr_BE <- function(mat_clr, counts_mat, genus_domain_map,
                   method = "pearson", use = "pairwise.complete.obs")
   
 ```
-### Candidates: global prescreen
+Candidates: global prescreen
 ```{r}
   sel_global <- which(abs(R) >= prescreen_global, arr.ind = TRUE)
   pairs_df <- tibble(
@@ -7200,7 +7215,7 @@ fast_pairwise_corr_BE <- function(mat_clr, counts_mat, genus_domain_map,
   )
   
 ```
-### Extra candidates: if whitelist applies, looser prescreen
+Extra candidates: if whitelist applies, looser prescreen
 ```{r}
   if (length(whitelist) > 0) {
     wl_b <- intersect(bact_cols, whitelist)
@@ -7226,7 +7241,7 @@ fast_pairwise_corr_BE <- function(mat_clr, counts_mat, genus_domain_map,
   }
   
 ```
-### Unique + minimum co-occurrence
+Unique + minimum co-occurrence
 ```{r}
   pairs_df <- pairs_df %>%
     distinct(Genus_1, Genus_2, .keep_all = TRUE) %>%
@@ -7250,7 +7265,7 @@ fast_pairwise_corr_BE <- function(mat_clr, counts_mat, genus_domain_map,
     if (all(is.na(bt$t))) return(NULL)
     ci <- tryCatch(boot.ci(bt, type = "perc"), error = function(e) NULL)
 ```
-### Sign consistency in bootstrap
+Sign consistency in bootstrap
 ```{r}
     scons <- mean(sign(bt$t) == sign(rho0), na.rm = TRUE)
     tibble(
@@ -7286,21 +7301,23 @@ edges_urban <- fast_pairwise_corr_BE(
 )
 
 ```
-### BH (todo es BE)
+BH (everythig is BE)
 ```{r}
 add_q <- function(df) if (nrow(df)) df %>% mutate(q = p.adjust(p, method = "BH")) else df
 edges_rural <- add_q(edges_rural)
 edges_urban <- add_q(edges_urban)
 
 ```
-### --------- Very strict final filter ----------
+#### Very strict final filter 
+This block applies a strict filter to the bacteria–eukaryote correlation results, keeping only edges with high effect size, strong bootstrap confidence intervals, ≥90% sign consistency, and FDR significance. It then builds node tables from the surviving genera, and exports networks (edges and nodes) in `.sif` and `.txt` formats separately for Rural and Urban groups.
+
 ```{r}
 filter_BE <- function(df) {
   if (nrow(df)==0) return(df[0,])
   df %>%
     mutate(abs_rho = abs(rho_mean)) %>%
 ```
-### CI must exceed threshold (not just same sign)
+CI must exceed threshold (not just same sign)
 ```{r}
     mutate(ci_strong = (rho_mean > 0 & CI_lower >= THRESH_BE) |
              (rho_mean < 0 & CI_upper <= -THRESH_BE)) %>%
@@ -7320,7 +7337,7 @@ edges_urban_f <- filter_BE(edges_urban)
 message("BE edges kept | Rural: ", nrow(edges_rural_f), " | Urban: ", nrow(edges_urban_f))
 
 ```
-### ============================= Nodes & export =============================
+Nodes & export 
 ```{r}
 make_nodes <- function(edges_df) {
   if (nrow(edges_df)==0) return(tibble(name=character(), Domain=character()))
@@ -7355,59 +7372,8 @@ message("Ready. BE networks VERY tight (domain-normalized, strong CI, co-occurre
 ```
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 <a id="diff-dis"></a>
-### Differential distribution of functional annotations reconstructed from high-quality metagenome-assembled genomes (MAGs)
+## Differential distribution of functional annotations reconstructed from high-quality metagenome-assembled genomes (MAGs)
 
 ### =========================================
 ### 1. Load base annotations
