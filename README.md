@@ -78,7 +78,7 @@ Finally we are going to create graphics using Rstudio to be able to visualize th
 
 
 # Figures
-### Disclaimer: The routes (eg. "/home/alumno21/axel/files/data_207_3.csv") varies depending of where the user storged the respective information
+#### Disclaimer: The routes (eg. "/home/alumno21/axel/files/data_207_3.csv") varies depending of where the user storged the respective information
 
 <a id="pcoa"></a>
 ## PCoA in the anthropometric-demographic space and its association with BMI percentile, age group, and lifestyle
