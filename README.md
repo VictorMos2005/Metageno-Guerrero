@@ -5565,12 +5565,11 @@ final_plotfunaon
 
 
 ## Functional annotation of genes from selected taxa
-#### In high-quality MAGs (>95% completeness). Stacked bar plots display the relative abundance of COG functional categories assigned to
+In high-quality MAGs (>95% completeness). Stacked bar plots display the relative abundance of COG functional categories assigned to
 annotated genes from representative bacterial groups (Bacilli,Bacteroidota, Blautia, Clostridia, and Clostridiaceae) in Rural and Urban communities.
 
-### =========================
-### Libraries
-### =========================
+#### Libraries
+
 ```{r}
 suppressPackageStartupMessages({
   library(dplyr); library(tidyr); library(stringr); library(purrr)
@@ -5579,22 +5578,23 @@ suppressPackageStartupMessages({
 })
 
 ```
-### =========================
-### User config (provide these)
-### =========================
-### Sys.setenv(ENTREZ_KEY = "YOUR_NCBI_KEY")   # already set in your session
+
+#### User config (provide these)
+It sets the NCBI API key, checks that `rural_files` and `urban_files` exist, and loads `anot` from the CSV if not already loaded.
 ```{r}
+Sys.setenv(ENTREZ_KEY = "YOUR_NCBI_KEY")   # already set in your session
 stopifnot(exists("rural_files"), exists("urban_files"))
 
 ```
-### If anot is not yet loaded:
+If anot is not yet loaded:
 ```{r}
  anot <- read.csv("/home/alumno21/axel/files/all_annotations_trimmed.csv",
  sep = ",", stringsAsFactors = FALSE)
 ```
-### =========================
-### Helpers
-### =========================
+
+#### Helpers
+You define two helper functions: `assign_domain`, which classifies a term into Viral, Bacteria, Archaea, Eukaryota, or Other, and `clean_pref_name`, which removes any text before the last `|` in a preferred name to keep only the clean taxon label.
+
 ```{r}
 assign_domain <- function(term) {
   term_lower <- tolower(term)
@@ -5610,7 +5610,9 @@ clean_pref_name <- function(x) {
 }
 
 ```
-### Robust, UID-based NCBI classification with cleaning and synonym fixes
+#### Robust, UID-based NCBI classification with cleaning and synonym fixes
+`ncbi_classification_cached()` standardizes names, checks a local cache, and only queries missing taxa in NCBI via **taxize**. It keeps key ranks, saves results back to the cache, and returns a tibble with each taxon and its lineage.
+
 ```{r}
 ncbi_classification_cached <- function(names_vec,
                                        ranks_keep = c("species","genus","family","order","class","phylum","superkingdom"),
@@ -5650,7 +5652,7 @@ ncbi_classification_cached <- function(names_vec,
       lineage <- if (nrow(cl2) > 0) paste(cl2$name, collapse = ";") else NA_character_
       cache[[nm]] <- lineage
 ```
-### Sys.sleep(0.34) # be nice to NCBI (optional)
+Sys.sleep(0.34) # be nice to NCBI (optional)
 ```{r}
     }
     saveRDS(cache, cache_path)
@@ -5663,7 +5665,9 @@ ncbi_classification_cached <- function(names_vec,
 }
 
 ```
-### Infer COG letters from multiple columns and add COG_inferred + COG_primary
+#### Infer COG letters from multiple columns and add COG_inferred + COG_primary
+The code defines three key parts. First, `infer_cog_from_columns()` scans annotation columns for valid COG letters, extracts them with regex, and assigns each gene both the set of all detected COGs and a primary COG (the most frequent one). Second, `match_focus_taxa()` checks if any taxa of interest appear in a lineage string and returns matches. Third, `cog_labels` provides descriptive English names for each COG category letter.
+
 ```{r}
 infer_cog_from_columns <- function(df,
                                    cols_to_scan = c("COG_category","EC","KEGG_ko","KEGG_Pathway",
@@ -5717,7 +5721,7 @@ infer_cog_from_columns <- function(df,
 }
 
 ```
-### Match lineage with focus taxa (returns vector of matches per lineage)
+Match lineage with focus taxa (returns vector of matches per lineage)
 ```{r}
 match_focus_taxa <- function(lineage_str, focus_taxa) {
   if (is.na(lineage_str) || lineage_str == "") return(character(0))
@@ -5728,7 +5732,7 @@ match_focus_taxa <- function(lineage_str, focus_taxa) {
 }
 
 ```
-### English labels for COG letters
+English labels for COG letters
 ```{r}
 cog_labels <- c(
   J="Translation, ribosome, biogenesis", A="RNA/nuclear processes (rare)",
@@ -5747,9 +5751,10 @@ cog_labels <- c(
 )
 
 ```
-### =========================
-### 1) Prepare base table
-### =========================
+
+#### 1. Prepare base table
+This block prepares the annotation table by filtering valid taxonomic entries, cleaning the taxonomic and preferred names, assigning simplified domains, and labeling each file as Rural or Urban. It then enriches the dataset by running infer_cog_from_columns(), which adds inferred COG categories for each gene.
+
 ```{r}
 anot_prep <- anot %>%
   filter(grepl("\\|", max_annot_lvl)) %>%
@@ -5766,14 +5771,14 @@ anot_prep <- anot %>%
   filter(!is.na(Grupo), Preferred_name_clean != "")
 
 ```
-### Add inferred COGs
+Add inferred COGs
 ```{r}
 anot_prep <- infer_cog_from_columns(anot_prep)
 
 ```
-### =========================
-### 2) NCBI lineages for all Preferred_name_clean (cached)
-### =========================
+
+#### 2. NCBI lineages for all Preferred_name_clean (cached)
+This step collects all unique cleaned preferred names, retrieves their cached NCBI taxonomic lineages with `ncbi_classification_cached()`, and merges those lineages back into `anot_prep` by matching names.
 ```{r}
 all_names <- unique(anot_prep$Preferred_name_clean)
 lin_tbl <- ncbi_classification_cached(all_names)
@@ -5781,15 +5786,16 @@ anot_prep <- anot_prep %>%
   left_join(lin_tbl, by = c("Preferred_name_clean" = "query_name"))
 
 ```
-### =========================
-### 3) Focus taxa (from your Figure 1 legends)
-### =========================
+
+#### 3. Focus taxa (from your Figure 1 legends)
+This code defines two sets of focus taxa, one bacterial and one eukaryotic, then checks which of those are actually present in the available lineage data. It outputs reduced lists (`present_bact` and `present_euk`) containing only the taxa that appear in the dataset.
+
 ```{r}
 focus_bacteria <- c("Clostridia","Clostridiaceae","Blautia","Bacteroidota","Bacilli")
 focus_euk      <- c("Ascomycota","Bilateria","Magnoliopsida","Opisthokonta","Streptophyta")
 
 ```
-### Keep only focus taxa that actually appear in the lineages
+Keep only focus taxa that actually appear in the lineages
 ```{r}
 present_in_lineages <- function(focus, lineages) {
   hits <- vapply(focus, function(tx) any(grepl(paste0("(^|;)", tx, "(;|$)"), lineages, useBytes = TRUE)), logical(1))
@@ -5799,9 +5805,9 @@ present_bact <- present_in_lineages(focus_bacteria, na.omit(anot_prep$lineage))
 present_euk  <- present_in_lineages(focus_euk,      na.omit(anot_prep$lineage))
 
 ```
-### =========================
-### 4) Expand to long by focus taxon
-### =========================
+
+#### 4. Expand to long by focus taxon
+This block defines a helper function `expand_focus` that filters the annotation table by domain, extracts lineages containing the specified focus taxa, and expands them into long format with one row per match. It then creates two datasets: `bact_focus_long` with bacterial focus taxa found in the lineages, and `euk_focus_long` with eukaryotic focus taxa.
 ```{r}
 expand_focus <- function(df, domain_filter, focus_taxa) {
   df %>%
@@ -5815,9 +5821,10 @@ bact_focus_long <- expand_focus(anot_prep, "Bacteria", present_bact)
 euk_focus_long  <- expand_focus(anot_prep, "Eukaryota", present_euk)
 
 ```
-### =========================
-### 5) Relative abundance of COG by file (counts -> proportions -> group mean)
-### =========================
+
+#### 5. Relative abundance of COG by file (counts -> proportions -> group mean)
+The function calculates average relative abundances of COG categories per focus taxon and group, saving results in `bact_cog_rel` and `euk_cog_rel` with readable COG labels.
+
 ```{r}
 summarize_cog_rel <- function(df, case_col = "Grupo") {
   df %>%
@@ -5841,9 +5848,9 @@ euk_cog_rel  <- euk_cog_rel %>%
                           levels = paste0(names(cog_labels), " — ", cog_labels)))
 
 ```
-### =========================
-### 6) Plot functions
-### =========================
+#### 6. Plot functions
+This code defines a plotting function that builds stacked bar charts showing the relative abundance of COG categories across groups, faceted by each focus taxon. It then generates two plots: one for bacterial focus taxa (`plot_bact_cog_by_taxa`) and one for eukaryotic focus taxa (`plot_euk_cog_by_taxa`). These plots display group comparisons (Rural vs Urban) in terms of functional category distributions.
+
 ```{r}
 plot_cog_stacks <- function(df_rel, title_txt = "") {
   ggplot(df_rel, aes(x = .data[[ "Grupo" ]], y = prop_mean, fill = COG_lab)) +
@@ -5863,18 +5870,47 @@ plot_bact_cog_by_taxa <- plot_cog_stacks(bact_cog_rel, "Bacteria: COG distributi
 plot_euk_cog_by_taxa  <- plot_cog_stacks(euk_cog_rel,  "Eukaryota: COG distribution by focus taxa")
 
 ```
-### =========================
-### 7) Show plots
-### =========================
+
+#### 7. Show plots
+
 ```{r}
 plot_bact_cog_by_taxa
 plot_euk_cog_by_taxa
 ```
-### =========================
-### 8) Improving format
-### =========================
 
-### ---- Facet order (keep your chosen order) ----
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+###  When the paper is published, here it will appear the plot made by this code
+
+
+
+
+
+
+
+
+
+
+
+
+
+#### 8. Improving format
+This block sets a fixed facet order, assigns consistent color palettes for bacteria and eukaryotes, and defines a refined plotting function with slimmer bars, single-row facets, simplified facet strips, and clean legends. It then generates two styled COG distribution plots—one for bacteria (`plot_bacteria_cog`) and one for eukaryotes (`plot_eukaryota_cog`)—which are displayed directly when run.
+
+Facet order 
 ```{r}
 bact_cog_rel <- bact_cog_rel %>%
   mutate(Focus_taxon = factor(Focus_taxon, levels = unique(Focus_taxon)))
@@ -5882,7 +5918,7 @@ euk_cog_rel  <- euk_cog_rel %>%
   mutate(Focus_taxon = factor(Focus_taxon, levels = unique(Focus_taxon)))
 
 ```
-### ---- Colors (same palettes you used) ----
+Colors (same palettes you used) 
 ```{r}
 present_levels_bact <- levels(droplevels(bact_cog_rel$COG_lab))
 present_levels_euk  <- levels(droplevels(euk_cog_rel$COG_lab))
@@ -5893,7 +5929,7 @@ cols_euk  <- colorRampPalette(RColorBrewer::brewer.pal(12, "Paired"))(length(pre
 names(cols_euk) <- present_levels_euk
 
 ```
-### ---- Styled plotting function (thin bars, single-row facets, clean strips, no % in legend) ----
+Styled plotting function (thin bars, single-row facets, clean strips, no % in legend) 
 ```{r}
 plot_cog_single_row <- function(df_rel, present_levels, cols, title_txt = "") {
   ggplot(df_rel, aes(x = Grupo, y = prop_mean, fill = COG_lab)) +
@@ -5928,7 +5964,7 @@ plot_cog_single_row <- function(df_rel, present_levels, cols, title_txt = "") {
 }
 
 ```
-### ---- Final plots in your format ----
+Final plots in your format 
 ```{r}
 plot_bacteria_cog <- plot_cog_single_row(
   df_rel = bact_cog_rel,
@@ -5945,16 +5981,46 @@ plot_eukaryota_cog <- plot_cog_single_row(
 )
 
 ```
-### ---- Show ----
+Show 
 ```{r}
 plot_bacteria_cog
 plot_eukaryota_cog
 ```
-### =========================
-### 9) Corrections
-### =========================
 
-### ---- Complete missing groups with zeros (so both Rural/Urban always appear) ----
+
+
+
+
+
+
+
+
+
+
+
+
+
+###  When the paper is published, here it will appear the plot made by this code
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### 9. Corrections
+This code ensures both groups (Rural and Urban) appear in every facet by filling missing combinations with zeros, then identifies panels with no data to annotate them. It reuses your color palettes and generates final plots for bacteria and eukaryotes where all groups are shown, and “no data” labels are added when applicable.
+
+Complete missing groups with zeros (so both Rural/Urban always appear) 
 ```{r}
 complete_groups_for_plot <- function(df_rel) {
   all_cogs <- sort(unique(df_rel$COG_primary))
@@ -5975,7 +6041,7 @@ bact_cog_rel_full <- complete_groups_for_plot(bact_cog_rel)
 euk_cog_rel_full  <- complete_groups_for_plot(euk_cog_rel)
 
 ```
-### ---- Identify panels/groups with total 0 to annotate "no data" ----
+Identify panels/groups with total 0 to annotate "no data" 
 ```{r}
 make_nodata_df <- function(df_rel_full) {
   df_rel_full %>%
@@ -5988,7 +6054,7 @@ bact_nodata <- make_nodata_df(bact_cog_rel_full)
 euk_nodata  <- make_nodata_df(euk_cog_rel_full)
 
 ```
-### ---- Plot function: thin bars, single row, clean strips; add optional "no data" ----
+Plot function: thin bars, single row, clean strips; add optional "no data" 
 ```{r}
 plot_cog_single_row <- function(df_rel, present_levels, cols, title_txt = "", nodata_df = NULL) {
   p <- ggplot(df_rel, aes(x = Grupo, y = prop_mean, fill = COG_lab)) +
@@ -6020,7 +6086,7 @@ plot_cog_single_row <- function(df_rel, present_levels, cols, title_txt = "", no
 }
 
 ```
-### ---- Colors (reuse your palettes, now with completed data) ----
+Colors (reuse your palettes, now with completed data)
 ```{r}
 present_levels_bact <- levels(droplevels(bact_cog_rel_full$COG_lab))
 present_levels_euk  <- levels(droplevels(euk_cog_rel_full$COG_lab))
@@ -6028,17 +6094,49 @@ cols_bact <- colorRampPalette(RColorBrewer::brewer.pal(12, "Set3"))(length(prese
 cols_euk  <- colorRampPalette(RColorBrewer::brewer.pal(12, "Paired"))(length(present_levels_euk)); names(cols_euk) <- present_levels_euk
 
 ```
-### ---- Plots (now always show both bars; "no data" where appropriate) ----
+Plots (now always show both bars; "no data" where appropriate)
 ```{r}
 plot_bacteria_cog <- plot_cog_single_row(bact_cog_rel_full, present_levels_bact, cols_bact, "", bact_nodata)
 plot_eukaryota_cog <- plot_cog_single_row(euk_cog_rel_full, present_levels_euk, cols_euk, "", euk_nodata)
 
 ```
-### FINAL PLOT PRESENTED AT PAPER
+#### Final plot presented at paper
 ```{r}
 plot_bacteria_cog
 plot_eukaryota_cog *not presented for missing values in one of the groups
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+###  When the paper is published, here it will appear the plot made by this code
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 <a id="diff-enr"></a>
 ## Differential enrichment of COG categories in Blautia and Clostridia between Rural and Urban groups
