@@ -7375,15 +7375,16 @@ message("Ready. BE networks VERY tight (domain-normalized, strong CI, co-occurre
 <a id="diff-dis"></a>
 ## Differential distribution of functional annotations reconstructed from high-quality metagenome-assembled genomes (MAGs)
 
-### =========================================
-### 1. Load base annotations
-### =========================================
+#### 1. Load base annotations and prepare data
+This code loads the annotation table, defines which samples are Urban or Rural, creates a helper function (`assign_domain`) to simplify domain classification, and prepares the dataset by keeping only entries with valid taxonomy levels. It cleans the last part of the taxonomic string, assigns each annotation to a simplified domain (Viral, Bacteria, Archaea, Eukaryota, Other), classifies each file as Rural or Urban, and filters out records that could not be assigned to either group.
+
+
 ```{r}
 anot <- read.csv("/home/alumno21/axel/files/all_annotations_trimmed.csv",
                  sep = ",", stringsAsFactors = FALSE)
 
 ```
-### --- Define files by group ---
+#### Define files by group 
 ```{r}
 urban_files <- c("37082_2 # 1", "37082_1#20", "37082_1#27", "37035_2#13", "37035_1#29",
                  "37082_2 # 14", "37035_2#12", "37035_2#6", "37082_1#17", "37035_2#14",
@@ -7429,7 +7430,7 @@ rural_files <- c("37082_3 # 17", "37082_3#15", "37035_1#22", "36703_3#31", "3708
                  "37035_7 # 18", "37035_7#23", "37035_7#25")
 
 ```
-### --- Function to classify simplified domain ---
+Function to classify simplified domain 
 ```{r}
 assign_domain <- function(term) {
   term_lower <- tolower(term)
@@ -7449,7 +7450,7 @@ assign_domain <- function(term) {
 }
 
 ```
-### --- Step 1: Prepare data ---
+Prepare data 
 ```{r}
 anot <- anot %>%
   filter(grepl("\\|", max_annot_lvl)) %>%
@@ -7465,14 +7466,15 @@ anot <- anot %>%
   filter(!is.na(Grupo))
 
 ```
-### =========================================
-### 2. Crear anot_with_cog
-### =========================================
-### Add COG_primary column from IDs/descriptions
+
+#### 2. Crear anot_with_cog
+This block enriches the dataset with functional annotations, ensures consistency of sample identifiers, and standardizes group labels. First, it uses `infer_cog_from_columns` to add a `COG_primary` column inferred from multiple annotation fields. Then, it checks that a `File` column exists; if not, it tries to rename a likely candidate (e.g., `sample`, `Sample`, `archivo`, `Archivo`). Finally, it normalizes the `Grupo` column so that only “Rural” or “Urban” remain valid, setting all other values to `NA`.
+
+Add COG_primary column from IDs/descriptions
 ```{r}
 anot_with_cog <- infer_cog_from_columns(anot)
 ```
-### --- 1) Ensure File column ---
+Ensure File column 
 ```{r}
 if (!"File" %in% names(anot_with_cog)) {
   cand_file <- intersect(c("sample","Sample","archivo","Archivo"), names(anot_with_cog))
@@ -7485,13 +7487,15 @@ if (!"File" %in% names(anot_with_cog)) {
 
 
 ```
-### Normalize normal values
+Normalize normal values
 ```{r}
 anot_with_cog <- anot_with_cog %>%
   mutate(Grupo = ifelse(Grupo %in% c("Rural","Urban"), Grupo, NA_character_))
 
 ```
-### --- 3) Ensure COG_primary (if your 'infer_cog_from_columns' has not set it yet) ---
+#### 3. Ensure COG_primary (if your 'infer_cog_from_columns' has not set it yet) 
+This block checks if `COG_primary` exists, tries to create it if missing, and stops with an error if still absent.
+
 ```{r}
 if (!"COG_primary" %in% names(anot_with_cog)) {
   anot_with_cog <- infer_cog_from_columns(anot_with_cog)
@@ -7501,12 +7505,15 @@ if (!"COG_primary" %in% names(anot_with_cog)) {
 }
 
 ```
-### --- 4) Ensure pathway column (metabolic_pathways or kegg_pathway_ids) ---
-### If you don't have 'metabolic_pathways' but you do have standalone KEGG IDs, build 'kegg_pathway_ids'
+#### 4. Ensure pathway column (metabolic_pathways or kegg_pathway_ids) 
+This code ensures pathway IDs are available. If neither `metabolic_pathways` nor `kegg_pathway_ids` exist, it searches candidate columns for KEGG IDs (`mapXXXXX` or `koXXXXX`), normalizes them to `mapXXXXX`, and stores them in a new `kegg_pathway_ids` column. If no IDs are found, it creates the column with `NA` values so downstream code won’t fail.
+
+
+  *If you don't have 'metabolic_pathways' but you do have standalone KEGG IDs, build 'kegg_pathway_ids'
 ```{r}
 if (!("metabolic_pathways" %in% names(anot_with_cog) || "kegg_pathway_ids" %in% names(anot_with_cog))) {
 ```
-### Try extracting 'mapXXXXX' from multiple candidate columns
+Try extracting 'mapXXXXX' from multiple candidate columns
 ```{r}
   cand_cols <- intersect(
     c("KEGG_Pathway","KEGG_Module","KEGG_Reaction","KEGG_ko","BRITE",
@@ -7532,7 +7539,7 @@ if (!("metabolic_pathways" %in% names(anot_with_cog) || "kegg_pathway_ids" %in% 
     ) %>%
     select(-.all_text)
 ```
-### if nothing is available, at least create an empty column so the code does not fail
+If nothing is available, at least create an empty column so the code does not fail
 ```{r}
   if (!"kegg_pathway_ids" %in% names(anot_with_cog)) {
     anot_with_cog$kegg_pathway_ids <- NA_character_
@@ -7540,11 +7547,13 @@ if (!("metabolic_pathways" %in% names(anot_with_cog) || "kegg_pathway_ids" %in% 
 }
 
 ```
-### --- 5) lineage_ncbi (robust and cached) ---
+#### 5. lineage_ncbi (robust and cached) 
+This block checks if the column `lineage_ncbi` is missing. If so, it prepares cleaned names (`Preferred_name_ncbi`) by removing prefixes like “unclassified” or “uncultured,” defines a safe cached function `ncbi_classification_cached` to fetch NCBI taxonomy with `taxize`, and avoids empty or invalid queries. Results are cached in an `.rds` file, and errors are caught so the code doesn’t break. Finally, the taxonomy lineages are joined back into `anot_with_cog`, or filled with `NA` if classification fails.
+
 ```{r}
 if (!"lineage_ncbi" %in% names(anot_with_cog)) {
 ```
-### column with the name to query in NCBI
+Column with the name to query in NCBI
 ```{r}
   if (!"Preferred_name_ncbi" %in% names(anot_with_cog)) {
     anot_with_cog <- anot_with_cog %>%
@@ -7554,7 +7563,7 @@ if (!"lineage_ncbi" %in% names(anot_with_cog)) {
   }
   
 ```
-### name cleaner to avoid empty queries
+Name cleaner to avoid empty queries
 ```{r}
   .clean_ncbi_name <- function(x) {
     x <- trimws(x)
@@ -7566,13 +7575,13 @@ if (!"lineage_ncbi" %in% names(anot_with_cog)) {
   }
   
 ```
-### cached and error-tolerant function
+Cached and error-tolerant function
 ```{r}
   ncbi_classification_cached <- function(names_vec,
                                          ranks_keep = c("species","genus","family","order","class","phylum","superkingdom"),
                                          cache_path = "taxize_ncbi_cache_uid.rds") {
 ```
-### Try loading Taxize; if it's not there, leave with NA without breaking
+Try loading Taxize; if it's not there, leave with NA without breaking
 ```{r}
     if (!requireNamespace("taxize", quietly = TRUE)) {
       warning("Paquete 'taxize' no disponible; 'lineage_ncbi' se dejará como NA.")
@@ -7582,7 +7591,7 @@ if (!"lineage_ncbi" %in% names(anot_with_cog)) {
     
     nm <- unique(.clean_ncbi_name(names_vec))
 ```
-### Filter empty spaces, dashes and entries without letter
+Filter empty spaces, dashes and entries without letter
 ```{r}
     nm <- nm[!is.na(nm) & nm != "-" & grepl("[A-Za-z]", nm)]
     
@@ -7592,7 +7601,7 @@ if (!"lineage_ncbi" %in% names(anot_with_cog)) {
     if (length(to_query) > 0) {
       for (n in to_query) {
 ```
-### Protection: do not send empty queries
+Protection: do not send empty queries
 ```{r}
         if (is.na(n) || !nzchar(n) || !grepl("[A-Za-z]", n)) { cache[[n]] <- NA_character_; next }
         
@@ -7617,12 +7626,12 @@ if (!"lineage_ncbi" %in% names(anot_with_cog)) {
   }
   
 ```
-### silent helpers
+silent helpers
 ```{r}
   trySuppressWarnings <- function(expr) suppressWarnings(try(expr, silent = TRUE))
   
 ```
-### run the function (with global failure handling)
+run the function (with global failure handling)
 ```{r}
   lin_tbl <- trySuppressWarnings(
     ncbi_classification_cached(anot_with_cog$Preferred_name_ncbi)
@@ -7638,7 +7647,8 @@ if (!"lineage_ncbi" %in% names(anot_with_cog)) {
 }
 
 ```
-### --- 6) Domain_simplified (if missing) ---
+#### 6. Domain_simplified (if missing)
+This block checks whether `Domain_simplified` exists. If it does not, it creates the column by scanning `lineage_ncbi`: entries containing “Bacteria” are labeled “Bacteria,” those with “Eukaryota” are labeled “Eukaryota,” and everything else is set to `NA`.
 ```{r}
 if (!"Domain_simplified" %in% names(anot_with_cog)) {
   anot_with_cog <- anot_with_cog %>%
@@ -7650,15 +7660,15 @@ if (!"Domain_simplified" %in% names(anot_with_cog)) {
 }
 
 ```
-### --- 7) Minimal final cleaning ---
-### Ensure that Group only has Rural/Urban and remove rows without these groups
+#### 7. Minimal final cleaning 
+  *Ensure that Group only has Rural/Urban and remove rows without these groups
 ```{r}
 anot_with_cog <- anot_with_cog %>% filter(Grupo %in% c("Rural","Urban"))
 
 ```
-### =========================================
-### libraries
-### =========================================
+
+#### Required libraries
+
 ```{r}
 suppressPackageStartupMessages({
   library(dplyr); library(tidyr); library(stringr); library(purrr)
@@ -7666,9 +7676,10 @@ suppressPackageStartupMessages({
 })
 
 ```
-### =========================================
-### Basic helpers + analisis nucleus
-### =========================================
+
+#### Basic helpers + analisis nucleus
+This code defines four utility functions. `.col_or_stop` returns the first matching column from a set of candidates, or stops if none are found. `.detect_taxa_any` checks whether a lineage string contains any of the specified taxa. `.separate_ids` expands a semicolon-delimited column into rows of clean IDs. `.fisher_p` runs a Fisher’s exact test on a 2×2 table constructed from the provided counts.
+
 ```{r}
 
 .col_or_stop <- function(df, candidates, must = TRUE) {
@@ -7701,7 +7712,9 @@ suppressPackageStartupMessages({
 }
 
 ```
-### ---- Pathway table per microorganism (presence/absence per file) ----
+#### Pathway table per microorganism (presence/absence per file) 
+This function `analyze_paths_for_micro` analyzes pathway prevalence for a given microorganism across groups (Rural vs Urban). It detects the right columns, filters by domain and taxa, optionally restricts to certain COG letters, expands pathway IDs, and counts how many files per group have each pathway. It then calculates prevalence percentages per group, difference in prevalence (delta\_pp), and runs Fisher’s exact test to estimate enrichment. Finally, it adjusts p-values (BH), marks enriched group (Urban, Rural, or Tie), and returns a summary table.
+
 ```{r}
 analyze_paths_for_micro <- function(anot,
                                     taxa,
@@ -7789,9 +7802,17 @@ analyze_paths_for_micro <- function(anot,
 }
 
 ```
-### =========================================
-### Build subsets (Blautia, Clostridia, Ascomycota) and merge into volcano_df
-### =========================================
+
+#### Build subsets (Blautia, Clostridia, Ascomycota) and merge into volcano_df
+This block runs the pathway enrichment analysis for three focus taxa:
+
+* **Blautia** filtered to **COG V** (trafficking/secretion).
+* **Clostridia** filtered to **COG L/A** (replication/repair, transcription).
+* **Ascomycota** without COG restriction.
+
+Each call produces a table with prevalence per group, Δ prevalence, Fisher test p-value, and adjusted q-value.
+All results are merged into `volcano_df`, and a global BH correction (`q_global`) is added across all taxa/pathways for later volcano plotting.
+
 ```{r}
 
 res_blautia <- analyze_paths_for_micro(
@@ -7816,9 +7837,16 @@ volcano_df <- bind_rows(res_blautia, res_clostridia, res_ascomycota) %>%
   mutate(q_global = p.adjust(p, method = "BH"))
 
 ```
-### =========================================
-### Plotting function and final plot
-### =========================================
+
+#### Plotting function and final plot
+This code defines a volcano plot function plot_volcano_all to visualize pathway enrichment results across taxa. It works as follows:
+
+It imports required libraries (dplyr, ggplot2, ggrepel, forcats).
+It standardizes p-values (p_raw, q_micro, q_global) and sets the y-axis to -log10(p) depending on the chosen argument (q_global, q_micro, or raw p).
+It keeps the original taxon labels for tables but generates simplified labels (Blautia, Clostridia, Ascomycota) for the legend.
+It selects the top 15% of significant pathways (highest evidence) to annotate.
+It sets palettes: Rural in gold, Urban in blue, Tie in gray (hidden from legend). Shapes differentiate taxa.
+It builds the plot with vertical/horizontal thresholds (0 difference, q = 0.05), points colored by group enrichment, and pathway IDs annotated using geom_text_repel.
 ```{r}
 
 suppressPackageStartupMessages({
@@ -7843,7 +7871,7 @@ plot_volcano_all <- function(df_all,
         TRUE                  ~ -log10(p_raw)
       ),
 ```
-### Maintain original labels for the tables, but create a simple name for the legend
+Maintain original labels for the tables, but create a simple name for the legend
 ```{r}
       Microorganism = factor(Microorganism,
                              levels = c("Blautia · COG V","Clostridia · COG L/A","Ascomycota")),
@@ -7855,13 +7883,13 @@ plot_volcano_all <- function(df_all,
     )
   
 ```
-### Top 15% por evidencia (yval alto = q pequeño) Top 15% by evidence (yval high = q low)
+Top 15% by evidence (yval high = q low)
 ```{r}
   n_lab  <- max(1, floor(nrow(dfp) * label_top_frac))
   lab_df <- dfp %>% arrange(desc(yval)) %>% slice_head(n = n_lab)
   
 ```
-### Palettes (shapes with fillers; "Tie" in gray but outside the legend)
+Palettes (shapes with fillers; "Tie" in gray but outside the legend)
 ```{r}
   fill_cols <- c(Rural = " # E9B44C", Urban = "#4F86C6", Tie = "grey70")
   shp_vals  <- c("Blautia" = 21, "Clostridia" = 22, "Ascomycota" = 24)
@@ -7902,7 +7930,7 @@ plot_volcano_all <- function(df_all,
 }
 
 ```
-### === Plot ===
+#### Plot 
 ```{r}
 p <- plot_volcano_all(
   volcano_df,
@@ -7912,3 +7940,12 @@ p <- plot_volcano_all(
 print(p)
 
 ```
+
+
+
+
+###  When the paper is published, here it will appear the plot made by this code
+
+
+
+
