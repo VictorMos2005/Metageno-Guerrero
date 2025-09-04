@@ -6147,18 +6147,20 @@ suppressPackageStartupMessages({
 })
 
 ```
-### Optional: palette for Group (same as your example)
+#### (OPTIONAL) Palette for Group (same as your example)
 ```{r}
 pal_group <- c(Rural = " # E9B44C", Urban = "#4F86C6")
 
 ```
-### --- Load data ---
+#### Load data and cleaning
+This script loads the annotation file, defines rural and urban sample sets, and provides utility functions. `assign_domain` classifies terms into broad domains, `clean_pref_name` extracts clean taxon names, `ncbi_classification_cached` retrieves and caches NCBI lineages with synonym handling, and `infer_cog_from_columns` scans multiple columns to infer COG categories. Finally, `match_focus_taxa` checks lineages for matches against a list of target taxa.
+
 ```{r}
 anot <- read.csv("/home/alumno21/axel/files/all_annotations_trimmed.csv",
                  sep = ",", stringsAsFactors = FALSE)
 
 ```
-### --- Define files by group ---
+Define files by group 
 ```{r}
 urban_files <- c("37082_2 # 1", "37082_1#20", "37082_1#27", "37035_2#13", "37035_1#29",
                  "37082_2 # 14", "37035_2#12", "37035_2#6", "37082_1#17", "37035_2#14",
@@ -6216,7 +6218,7 @@ clean_pref_name <- function(x) {
   ifelse(grepl("\\|", x), sub(".*\\|", "", x), x)
 }
 ```
-### Robust, UID-based NCBI classification with cleaning and synonym fixes
+Robust, UID-based NCBI classification with cleaning and synonym fixes
 ```{r}
 ncbi_classification_cached <- function(names_vec,
                                        ranks_keep = c("species","genus","family","order","class","phylum","superkingdom"),
@@ -6256,7 +6258,7 @@ ncbi_classification_cached <- function(names_vec,
       lineage <- if (nrow(cl2) > 0) paste(cl2$name, collapse = ";") else NA_character_
       cache[[nm]] <- lineage
 ```
-### Sys.sleep(0.34) # be nice to NCBI (optional)
+Sys.sleep(0.34) # be nice to NCBI (optional)
 ```{r}
     }
     saveRDS(cache, cache_path)
@@ -6319,7 +6321,7 @@ infer_cog_from_columns <- function(df,
 }
 
 ```
-### Match lineage with focus taxa (returns vector of matches per lineage)
+Match lineage with focus taxa (returns vector of matches per lineage)
 ```{r}
 match_focus_taxa <- function(lineage_str, focus_taxa) {
   if (is.na(lineage_str) || lineage_str == "") return(character(0))
@@ -6329,7 +6331,9 @@ match_focus_taxa <- function(lineage_str, focus_taxa) {
   hits
 }
 ```
-### --- Step 1: Prepare data ---
+#### 1. Prepare data 
+This block cleans and standardizes annotations. It filters rows with valid taxonomy (`max_annot_lvl` containing “|”), extracts the deepest taxonomic level, assigns a simplified domain, and labels each file as Rural or Urban. In `anot_prep`, it also generates a cleaned preferred name and drops empty or ungrouped entries. Finally, it enriches the dataset with inferred COG categories using `infer_cog_from_columns`.
+
 ```{r}
 anot <- anot %>%
   filter(grepl("\\|", max_annot_lvl)) %>%
@@ -6359,14 +6363,15 @@ anot_prep <- anot %>%
   filter(!is.na(Grupo), Preferred_name_clean != "")
 
 ```
-### Add inferred COGs
+Add inferred COGs
 ```{r}
 anot_prep <- infer_cog_from_columns(anot_prep)
 
 ```
-### =========================
-### 2) NCBI lineages for all Preferred_name_clean (cached)
-### =========================
+
+#### 2. NCBI lineages for all Preferred_name_clean (cached)
+This code extracts all unique cleaned preferred names, retrieves their NCBI taxonomic lineages with `ncbi_classification_cached`, and merges the lineage table back into `anot_prep` so each annotation carries its corresponding taxonomy.
+
 ```{r}
 all_names <- unique(anot_prep$Preferred_name_clean)
 lin_tbl <- ncbi_classification_cached(all_names)
@@ -6374,15 +6379,15 @@ anot_prep <- anot_prep %>%
   left_join(lin_tbl, by = c("Preferred_name_clean" = "query_name"))
 
 ```
-### =========================
-### 3) Focus taxa (from your Figure 1 legends)
-### =========================
+
+#### 3. Focus taxa (from your Figure 1 legends)
+
 ```{r}
 focus_bacteria <- c("Clostridia","Clostridiaceae","Blautia","Bacteroidota","Bacilli")
 focus_euk      <- c("Ascomycota","Bilateria","Magnoliopsida","Opisthokonta","Streptophyta")
 
 ```
-### Keep only focus taxa that actually appear in the lineages
+Keep only focus taxa that actually appear in the lineages
 ```{r}
 present_in_lineages <- function(focus, lineages) {
   hits <- vapply(focus, function(tx) any(grepl(paste0("(^|;)", tx, "(;|$)"), lineages, useBytes = TRUE)), logical(1))
@@ -6392,9 +6397,9 @@ present_bact <- present_in_lineages(focus_bacteria, na.omit(anot_prep$lineage))
 present_euk  <- present_in_lineages(focus_euk,      na.omit(anot_prep$lineage))
 
 ```
-### =========================
-### 4) Expand to long by focus taxon
-### =========================
+
+#### 4. Expand to long by focus taxon
+This code defines lists of bacterial and eukaryotic focus taxa, then checks which of them are actually present in the lineage annotations of your dataset. The `present_in_lineages` function scans the lineage strings and returns only the taxa that appear. The results are stored in `present_bact` and `present_euk`, ensuring that downstream analyses only use taxa truly represented in your data.
 ```{r}
 expand_focus <- function(df, domain_filter, focus_taxa) {
   df %>%
@@ -6408,7 +6413,7 @@ bact_focus_long <- expand_focus(anot_prep, "Bacteria", present_bact)
 euk_focus_long  <- expand_focus(anot_prep, "Eukaryota", present_euk)
 
 ```
-### If you don't have cog_labels in your env, define a minimal mapping
+If you don't have cog_labels in your env, define a minimal mapping
 ```{r}
 if (!exists("cog_labels")) {
   cog_labels <- c(
@@ -6429,11 +6434,11 @@ if (!exists("cog_labels")) {
 }
 
 ```
-### ===============================
-### Main plot: grouped bars + brackets + stars (no SE, no q)
-### ===============================
 
-### ---- Build per-file compositions (reusable) ----
+#### Main plot: grouped bars + brackets + stars (no SE, no q)
+This block defines how to compute and visualize COG distributions for a focus taxon. The `per_file_cog()` function calculates the relative proportions of each COG per file, grouped by Rural or Urban. In the plotting function, the code selects the most abundant COGs, computes group means, runs Wilcoxon tests per COG with BH correction, and assigns significance stars. If `sig_only = TRUE`, only significant COGs that meet the thresholds are kept; otherwise, all top COGs are shown.
+
+#### Build per-file compositions (reusable) 
 ```{r}
 per_file_cog <- function(focus_long_df) {
   focus_long_df %>%
@@ -6454,7 +6459,7 @@ plot_cog_groupbars_style <- function(perfile_df, focus_taxon,
   df <- perfile_df %>% dplyr::filter(Focus_taxon == !!focus_taxon)
   
 ```
-### Choose top COGs by overall mean
+Choose top COGs by overall mean
 ```{r}
   top_cogs <- df %>%
     dplyr::group_by(COG_primary) %>%
@@ -6465,7 +6470,7 @@ plot_cog_groupbars_style <- function(perfile_df, focus_taxon,
   df <- df %>% dplyr::filter(COG_primary %in% top_cogs)
   
 ```
-### Group means (%)
+Group means (%)
 ```{r}
   group_avg <- df %>%
     dplyr::group_by(Grupo, COG_primary) %>%
@@ -6476,7 +6481,7 @@ plot_cog_groupbars_style <- function(perfile_df, focus_taxon,
     )
   
 ```
-### Wilcoxon per COG (BH within panel)
+Wilcoxon per COG (BH within panel)
 ```{r}
   tests <- df %>%
     dplyr::group_by(COG_primary) %>%
@@ -6509,7 +6514,7 @@ plot_cog_groupbars_style <- function(perfile_df, focus_taxon,
   tests_sig <- tests %>% dplyr::filter(stars != "", abs(delta) >= 100*min_diff)
   
 ```
-### Keep only significant COGs if requested
+Keep only significant COGs if requested
 ```{r}
   if (sig_only) {
     if (nrow(tests_sig) == 0) {
@@ -6531,20 +6536,22 @@ plot_cog_groupbars_style <- function(perfile_df, focus_taxon,
   
   
 ```
-### --- DROP unused levels after the sig_only filter ---
+#### DROP unused levels after the sig_only filter 
+This section finalizes the grouped barplot with statistical annotations. It drops unused COG factor levels, computes a y-position above the tallest bar for each COG, and maps Rural/Urban bar positions. It then builds brackets with Wilcoxon significance stars and overlays them on the plot. The plot shows mean percentages per group with bars, optional value labels, custom fill colors, compact x-axis labels, percentage y-axis, and a clean minimal theme.
+
 ```{r}
   group_avg <- group_avg %>%
     dplyr::mutate(COG_lab = forcats::fct_drop(COG_lab))
   
 ```
-### Y-position of the bracket: a little bit higher than the highest barr of each COG
+Y-position of the bracket: a little bit higher than the highest barr of each COG
 ```{r}
   anno_y <- group_avg %>%
     dplyr::group_by(COG_lab) %>%
     dplyr::summarise(y = max(mean_pct, na.rm = TRUE) * 1.10, .groups = "drop")
   
 ```
-###  Map of the real positions in x for what has to be drawn
+Map of the real positions in x for what has to be drawn
 ```{r}
   x_map <- group_avg %>%
     dplyr::distinct(COG_lab) %>%
@@ -6555,7 +6562,7 @@ plot_cog_groupbars_style <- function(perfile_df, focus_taxon,
                   x_urban = gx + off)
   
 ```
-### Brackets + stars using the map of real positions
+Brackets + stars using the map of real positions
 ```{r}
   brackets_manual <- tests %>%
     dplyr::mutate(
@@ -6575,7 +6582,7 @@ plot_cog_groupbars_style <- function(perfile_df, focus_taxon,
                 position = position_dodge(width = 0.8),
                 vjust = 0, size = 3)} +
 ```
-### bracket & stars (single panel, grouped bars)
+Bracket & stars (single panel, grouped bars)
 ```{r}
     geom_segment(data = brackets_manual,
                  aes(x = x_rural, xend = x_urban, y = y, yend = y),
@@ -6609,9 +6616,8 @@ plot_cog_groupbars_style <- function(perfile_df, focus_taxon,
 }
 
 ```
-### ===============================
-### 
-### ===============================
+The function makes a list of COG plots, one per taxon in `taxa_vec`, using the same parameters, and returns them named by taxon.
+
 ```{r}
 make_taxon_plots_groupstyle <- function(perfile_df, taxa_vec,
                                         top_n = 6, alpha = 0.05, min_diff = 0.03, min_n = 3,
@@ -6628,10 +6634,11 @@ make_taxon_plots_groupstyle <- function(perfile_df, taxa_vec,
 }
 
 ```
-### ===============================
-### PLOTS
-### ===============================
-### Choose taxa present in your data:
+
+#### Plots
+`bact_combined` stores the patchwork of bacterial plots and `euk_combined` stores the patchwork of eukaryotic plots. Calling either object in R will display the corresponding combined figure.
+
+Choose taxa present in your data:
 ```{r}
 bact_taxa <- intersect(c("Blautia","Clostridia"),
                        unique(bact_perfile$Focus_taxon))
@@ -6640,7 +6647,7 @@ euk_taxa  <- intersect(c("Ascomycota","Bilateria","Magnoliopsida","Opisthokonta"
                        unique(euk_perfile$Focus_taxon))
 
 ```
-### Build lists of plots
+Build lists of plots
 ```{r}
 bact_plots <- make_taxon_plots_groupstyle(bact_perfile, bact_taxa,
                                           top_n = 6, min_diff = 0.03, sig_only = TRUE)
@@ -6648,7 +6655,7 @@ euk_plots  <- make_taxon_plots_groupstyle(euk_perfile,  euk_taxa,
                                           top_n = 6, min_diff = 0.03, sig_only = TRUE)
 
 ```
-### Combine with patchwork (one row; shared legend)
+Combine with patchwork (one row; shared legend)
 ```{r}
 bact_combined <- wrap_plots(bact_plots, nrow = 1, guides = "collect") &
   theme(legend.position = "right")
@@ -6656,11 +6663,38 @@ euk_combined  <- wrap_plots(euk_plots,  nrow = 1, guides = "collect") &
   theme(legend.position = "right")
 
 ```
-### Show
+Show
 ```{r}
 bact_combined
 ```
-##### euk_combined no significant data
+euk_combined no significant data
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+###  When the paper is published, here it will appear the plot made by this code
+
+
+
+
+
+
+
+
+
+
+
 
 
 <a id="occurr"></a>
