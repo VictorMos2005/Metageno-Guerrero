@@ -442,7 +442,7 @@ labels_percentil_group <- data %>%
   deframe()
 
 ```
-#### Plot 1: BMI density by Lifestyle (filtered data, full legend) 
+## Plot 1: BMI density by Lifestyle (filtered data, full legend) 
 Creates a density plot of BMI values, filled by Lifestyle (Rural vs Urban), with custom colors, labels showing sample counts, minimal styling, and a descriptive title and axis labels.
 
 ```
@@ -486,7 +486,7 @@ plot1 <- ggplot(data_filtered, aes(x = BMI, fill = Lifestyle)) +
 
 
 
-#### Plot 2: Age density by Percentil_group 
+## Plot 2: Age density by Percentil_group 
 This code generates a density plot of Age, filled by Percentil\_group categories (Underweight, Normal Weight, Overweight/Obesity), using custom colors and labels with counts, styled with a minimal theme and labeled axes/title.
 
 ```
@@ -631,7 +631,7 @@ print(combined_plot)
 
 
 
-#### Final Fig. 1 composed
+## Final Fig. 1 composed
 This code removes titles from four plots, then arranges `plot1`, `plot2`, `plot3`, and `p_lifestyle` into a 2×2 layout using `patchwork`, sets relative row heights, and adds panel tags (A, B, C, D) with custom style and position.
 
 *Note: you create `plot33 <- plot3 + ...` but the combined layout uses `plot3` (not `plot33`).*
@@ -1177,7 +1177,7 @@ wilcox_df <- alpha_long %>%
          x = 1.5, y = ymax * 1.02)
 
 ```
-#### 6. Style and plot 
+## 6. Style and plot 
 
 This code sets a custom theme and palette, then plots alpha diversity by group.
 It builds a faceted box-and-jitter plot of each alpha metric comparing Rural vs Urban, applies a clean minimal theme with custom axis lines and facet styling, uses a manual color palette, expands y-limits, and adds Wilcoxon significance stars at preset positions.
@@ -1365,7 +1365,7 @@ wilcox_df <- alpha_long %>%
          x = 1.5, y = ymax * 1.02)
 
 ```
-####  4. PLOT 
+##  4. Plot 
 This code creates and displays a faceted boxplot comparing alpha diversity metrics between Rural and Urban groups at the bacterial genus level. It overlays jittered points to show sample values, applies a custom color palette and theme, adjusts axis scales, and annotates the plots with significance stars from the Wilcoxon tests.
 
 ```{r}
@@ -1514,7 +1514,7 @@ wilcox_df <- alpha_long %>%
          x = 1.5, y = ymax * 1.02)
 
 ```
-####  4. PLOT 
+##  4. Plot 
 This code builds a faceted boxplot with jittered points to compare eukaryotic alpha diversity metrics between Rural and Urban groups at the genus level. It applies the custom palette and theme, adjusts axis scaling, and adds significance stars from the Wilcoxon tests to highlight statistical differences.
 ```{r}
 p_alpha_euk_genus <- ggplot(alpha_long, aes(Group, value, fill = Group)) +
@@ -1866,7 +1866,7 @@ combined_plot <-
   )
 
 ```
-#### Final well-formatted beta divesity graph
+## Final well-formatted beta divesity graph
 ```{r}
 print(combined_plot)
 
@@ -2057,7 +2057,7 @@ More space at the edges
   scale_x_continuous(expand = expansion(mult = c(0.08, 0.08))) +
   scale_y_continuous(expand = expansion(mult = c(0.08, 0.08)))
 ```
-#### Final composition (vertical, breathing) 
+## Final composition (vertical, breathing) 
 ```{r}
 final_plot <- (p1 / p2 / p3) +
   plot_layout(heights = c(1, 1, 1.3), guides = "collect") +
@@ -2072,7 +2072,7 @@ final_plot <- (p1 / p2 / p3) +
 final_plot
 ```
 
-### Differentially abundant bacterial and eukaryotic taxa between Rural and Urban groups
+## Differentially abundant bacterial and eukaryotic taxa between Rural and Urban groups
 
 #### Requiered libraries: dplyr, tidyr, stringr, ggplot2, purrr, broom
 ```{r}
@@ -2292,7 +2292,7 @@ base_theme <- theme_minimal(base_size = 11) +
   )
 
 ```
-#### Plot: boxplot with NON-ZEROS + jitter with ALL 
+## Plot: boxplot with NON-ZEROS + jitter with ALL 
 **This code draws a faceted box-and-jitter plot of log10(read counts) for selected bacterial genera, comparing Urban vs Rural.**
 It uses only non-zero reads for the boxplots/points, adds per-genus Wilcoxon significance stars at preset y-positions, applies a minimal theme, custom fills, and then prints the figure.
 
@@ -2461,7 +2461,7 @@ base_theme <- theme_minimal(base_size = 11) +
   )
 
 ```
-#### Plot 
+## Plot 
 This code first creates a faceted boxplot with jitter points for the selected eukaryotic taxa, plotting log-transformed reads by Urban and Rural groups and adding Wilcoxon significance stars. That plot is printed on its own. Then, with patchwork, it combines the bacterial and eukaryotic plots into one figure, stacking them vertically, removing the legend from the lower panel, and adding letter tags styled in plain font. The final output shown is the composite figure.
 
 ```{r}
@@ -2503,6 +2503,33 @@ final_fig5 <- plot_boxbactpred / (p_euk_sel+ theme(legend.position = "none")) +
 
 final_fig5
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+###  When the paper is published, here it will appear the plot made by this code
+
+
+
+
+
+
+
+
+
+
+
+
 ## Mean relative abundance of the most prevalent bacterial and eukaryotic genera in rural and urban samples.
 
 #### Graph boxplots of EUKARYOTA
@@ -2759,7 +2786,7 @@ Stars (also in the new level)
    base_theme
 
 ```
-#### Corrected graph
+## Corrected graph
 This code prints the eukaryotic bar chart (`p_sep`), loads helper packages, defines a set of bacterial genera of interest, computes total bacterial reads per sample, aggregates reads for the selected genera, fills missing genera with zeros, converts them to percent of each sample’s bacterial total, fixes genus order for plotting, and calculates Urban/Rural mean percentages per genus for a grouped bar chart.
 
 ```{r}
@@ -2905,7 +2932,7 @@ Data for BRACKETS drawn by hand
      y = ypos
    )
 ```
-##### Final graphic (barrs in parallel + brackets + stars ) 
+## Final graphic (barrs in parallel + brackets + stars ) 
 This code builds and prints a grouped bar chart of mean percentage abundance per bacterial genus for Urban vs Rural samples, adds formatted percent labels above each bar, draws manual significance brackets and stars over each genus based on Wilcoxon tests, applies a custom color palette and a minimal theme, and expands the y-axis to leave room for the brackets and annotations.
 
 ```{r}
@@ -2986,7 +3013,7 @@ Stars (also in the new level)
 
 
 
-#### Graph both boxplots for EUK and BACT
+## Graph both boxplots for EUK and BACT
 This code stacks the two barplots (`p_sep2` for bacterial genera and `p_sep` for eukaryotic taxa) one on top of the other, removes their individual titles, and combines them into a single panel figure. The legends are collected on the right-hand side, and automatic panel labels (A, B…) are added to distinguish the two plots. The theme ensures the legend is displayed on the right and the panel tags are styled in plain text with size 14. When run, it will display the final composite figure (`final_fig`).
 
 ```{r}
@@ -3291,7 +3318,7 @@ readr::write_tsv(res_bact, paste0(OUT_PREFIX, "_Bacteria_stats.tsv"))
 readr::write_tsv(res_euk,  paste0(OUT_PREFIX, "_Eukaryota_stats.tsv"))
 
 ```
-#### Volcano plot helper
+## Volcano plot helper
 This code defines a function to generate a **volcano plot** comparing rural vs. urban groups. It highlights genera with FDR ≤ 0.05, labels the most significant or largest fold-changes, and plots log2 fold-change on the x-axis against –log10(FDR) on the y-axis. Reference lines mark thresholds, significant points are distinguished, labels are added with `geom_text_repel`, and the figure is saved as a high-resolution PNG.
 
 ```{r}
@@ -3366,7 +3393,7 @@ Choose labels: the most significant + highest |log2FC|
 
 
 
-#### Draw volcano plots 
+## Draw volcano plots 
 This code generates two volcano plots—one for Bacteria and one for Eukaryota—saving them as PNGs with the given filenames, and prints a message listing the output files. It defines `volcano_plot()` to create the plot and write it to disk (using **ragg** if available, otherwise base `png()`), then returns the plot object. Note: in a fresh R session you must define `volcano_plot()` **before** calling it, or the initial two calls will error.
 
 ```{r}
@@ -3657,7 +3684,7 @@ Keep only Bacteria and Eukaryota
 dat0 <- dat0 %>% filter(Domain %in% c("Bacteria","Eukaryota"))
 
 ```
-### Relative abundance within DOMAIN per sample 
+#### Relative abundance within DOMAIN per sample 
 It calculates genus-level reads per sample, normalizes them by total reads within each domain, and produces relative abundances for Rural and Urban groups.
 ```{r}
 totals_domain <- dat0 %>%
@@ -3812,7 +3839,7 @@ volcano_plot <- function(df_stats, title_txt, out_png) {
 }
 
 ```
-#### Calls
+## Calls
 ```{r}
 volcano_plot(res_bact, "", paste0(OUT_PREFIX, "_Bacteria.png"))
 volcano_plot(res_euk,  "", paste0(OUT_PREFIX, "_Eukaryota.png"))
@@ -4029,7 +4056,7 @@ readr::write_tsv(res_bact, paste0(OUT_PREFIX, "_Bacteria_stats.tsv"))
 readr::write_tsv(res_euk,  paste0(OUT_PREFIX, "_Eukaryota_stats.tsv"))
 
 ```
-#### Volcano plot (color by group with higher abundance) 
+## Volcano plot (color by group with higher abundance) 
 This function builds a BMI-based volcano plot: it flags significance (FDR ≤ 0.05), colors points by which group is higher (BMI<25 vs BMI≥25), labels the top genera by significance and effect size, and draws FDR/zero reference lines. It prints the plot to the viewer and also saves a 300-dpi PNG via a cairo device, then returns the ggplot object.
 
 ```{r}
@@ -4107,7 +4134,7 @@ Save robustly with cairo
 
 
 
-#### Draw volcano plots 
+## Draw volcano plots 
 Those lines generate and display volcano plots for bacteria and eukaryota by BMI group, and save them as PNG files in the working directory, showing which genera are enriched in BMI<25 or BMI≥25.
 
 ```{r}
@@ -4363,7 +4390,7 @@ readr::write_tsv(res_bact, paste0(OUT_PREFIX, "_Bacteria_stats.tsv"))
 readr::write_tsv(res_euk,  paste0(OUT_PREFIX, "_Eukaryota_stats.tsv"))
 
 ```
-#### Volcano plot (color by group with higher abundance) 
+## Volcano plot (color by group with higher abundance) 
 Defines a function that builds a volcano plot comparing BMI≥25 Rural vs BMI≥25 Urban per genus: it flags significance (FDR ≤ 0.05), colors points by which subgroup is higher (positive log2FC = Rural; negative = Urban), labels the top genera, draws FDR/zero lines, prints the plot to the viewer, and saves a 300-dpi PNG via a cairo device.
 ```{r}
 volcano_plot <- function(df_stats, title_txt, out_png) {
@@ -4444,7 +4471,7 @@ Save robustly with cairo
 
 
 
-#### Draw volcano plots
+## Draw volcano plots
 These two calls render and save the BMI≥25 Rural vs Urban volcano plots for bacteria and eukaryota, displaying them in the viewer and writing high-res PNGs named `volcano_BMI26_Rural_vs_Urban_Bacteria.png` and `volcano_BMI26_Rural_vs_Urban_Eukaryota.png` in your working directory.
 
 ```{r}
@@ -4482,7 +4509,7 @@ volcano_plot(res_euk,  "", paste0(OUT_PREFIX, "_Eukaryota.png"))
 
 
 
-### ===== Summary =====
+#### Summary 
 ```{r}
 message("\nResumen Bacteria: n=", nrow(res_bact),
         " | q<=0.05: ", sum(res_bact$q <= ALPHA_Q, na.rm = TRUE))
@@ -4671,7 +4698,7 @@ combined_busco_plot <- plot_rural + plot_urban +
     )
   )
 ```
-### Final BUSCO table wit colors
+## Final BUSCO table with colors
 ```{r}
 combined_busco_plot
 
@@ -4937,7 +4964,7 @@ plot_funanondoms <- plot_abundancia / plot_texto + plot_layout(heights = c(10, 1
 plot_funanondoms <- plot_abundancia 
 
 ```
-#### Show results
+## Show results
 ```{r}
 plot_funanondoms
 
@@ -5260,7 +5287,7 @@ texto_genes_bact <- paste0(
 )
 
 ```
-#### 12. Bar plot 
+## 12. Bar plot 
 This code builds a stacked bar plot showing the relative abundance of the top 15 bacterial taxa between Rural and Urban groups. It normalizes bar heights to proportions, uses a custom color palette and legend labels, and applies a clean theme with adjusted margins and text size for clarity.
 
 ```{r}
@@ -5323,7 +5350,7 @@ plot_bacteriafunano <- plot_bacteria
 plot_bacteriafunano <- plot_bacteria / plot_texto_bact + patchwork::plot_layout(heights = c(10, 1))
 
 ```
-#### Show result 
+## Show result 
 ```{r}
 plot_bacteriafunano
 
@@ -5459,7 +5486,7 @@ texto_genes_euk <- paste0(
 )
 
 ```
-#### Plot
+## Plot
 It builds a stacked percent bar chart of the top Eukaryotic taxa by group (plot_euk), a one-line caption panel (plot_texto_euk), and a combined figure (plot_euk_final). Your last line reassigns plot_euk to plot_eukfunanon, so nothing is drawn automatically.
 ```{r}
 plot_euk <- ggplot(abundancia_promedio_taxon_top_euk,
@@ -5517,7 +5544,7 @@ plot_eukfunanon <- plot_euk
 plot_eukfunanon
 library(patchwork)
 ```
-#### ABC UNITED
+## ABC UNITED
 That code combines the three panels (`plot_funanondoms`, `plot_bacteriafunano`, `plot_eukfunanon`) side by side with patchwork, adds automatic tags (A, B, C) through `plot_annotation`, and applies a theme to style the tags. The object `final_plotfunaon` holds the composite figure, and since the last line just evaluates it, R will render the full image in your plotting window when you run the code.
 
 ```{r}
@@ -5871,7 +5898,7 @@ plot_euk_cog_by_taxa  <- plot_cog_stacks(euk_cog_rel,  "Eukaryota: COG distribut
 
 ```
 
-#### 7. Show plots
+## 7. Show plots
 
 ```{r}
 plot_bact_cog_by_taxa
@@ -5981,7 +6008,7 @@ plot_eukaryota_cog <- plot_cog_single_row(
 )
 
 ```
-Show 
+## Show 
 ```{r}
 plot_bacteria_cog
 plot_eukaryota_cog
@@ -6100,7 +6127,7 @@ plot_bacteria_cog <- plot_cog_single_row(bact_cog_rel_full, present_levels_bact,
 plot_eukaryota_cog <- plot_cog_single_row(euk_cog_rel_full, present_levels_euk, cols_euk, "", euk_nodata)
 
 ```
-#### Final plot presented at paper
+## Final plot presented at paper
 ```{r}
 plot_bacteria_cog
 plot_eukaryota_cog *not presented for missing values in one of the groups
@@ -6435,7 +6462,7 @@ if (!exists("cog_labels")) {
 
 ```
 
-#### Main plot: grouped bars + brackets + stars (no SE, no q)
+## Main plot: grouped bars + brackets + stars (no SE, no q)
 This block defines how to compute and visualize COG distributions for a focus taxon. The `per_file_cog()` function calculates the relative proportions of each COG per file, grouped by Rural or Urban. In the plotting function, the code selects the most abundant COGs, computes group means, runs Wilcoxon tests per COG with BH correction, and assigns significance stars. If `sig_only = TRUE`, only significant COGs that meet the thresholds are kept; otherwise, all top COGs are shown.
 
 #### Build per-file compositions (reusable) 
@@ -6635,7 +6662,7 @@ make_taxon_plots_groupstyle <- function(perfile_df, taxa_vec,
 
 ```
 
-#### Plots
+## Plots
 `bact_combined` stores the patchwork of bacterial plots and `euk_combined` stores the patchwork of eukaryotic plots. Calling either object in R will display the corresponding combined figure.
 
 Choose taxa present in your data:
@@ -7930,7 +7957,7 @@ Palettes (shapes with fillers; "Tie" in gray but outside the legend)
 }
 
 ```
-#### Plot 
+## Plot 
 ```{r}
 p <- plot_volcano_all(
   volcano_df,
